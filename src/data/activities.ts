@@ -1,5 +1,6 @@
 import type { Activity } from '../types'
 import { dateKey } from '../lib/utils'
+import { WEEKLY_PLAN } from './diet'
 
 interface GCalEvent {
   date: string
@@ -40,19 +41,70 @@ export const GCAL: GCalEvent[] = [
   { date: '2026-04-29', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan', category: 'lavoro', duration: 50 },
 ]
 
-const BASE_TEMPLATE: Omit<Activity, 'id'>[] = [
+// ─── PILLOLE (ogni giorno) ──────────────────────────────────
+const PILLS: Omit<Activity, 'id'>[] = [
   { time: '07:30', title: 'Pillola — NAC 1000mg a digiuno', category: 'salute', duration: 5, streak: true },
   { time: '08:30', title: 'Pillola — Collagene PRE-palestra', category: 'salute', duration: 5, streak: true },
-  { time: '09:00', title: 'Palestra', category: 'sport', duration: 60, streak: true },
   { time: '09:00', title: 'Pillola — Immunomix x2 + Psicobrain mattina', category: 'salute', duration: 5, streak: true },
   { time: '10:15', title: 'Pillola — Collagene POST-palestra', category: 'salute', duration: 5, streak: true },
-  { time: '13:30', title: 'Pranzo leggero', category: 'routine', duration: 30, streak: false },
   { time: '13:30', title: 'Pillola — Omega3+CoQ10 + Berberol pranzo', category: 'salute', duration: 5, streak: true },
   { time: '16:00', title: 'Pillola — Immunomix x2 + Psicobrain pomeriggio', category: 'salute', duration: 5, streak: true },
-  { time: '20:00', title: 'Cena', category: 'routine', duration: 40, streak: false },
   { time: '20:00', title: 'Pillola — Omega3+CoQ10 + Berberol + D3+K2', category: 'salute', duration: 5, streak: true },
   { time: '22:30', title: 'Pillola — Protectin prima di dormire', category: 'salute', duration: 5, streak: true },
 ]
+
+// ─── SPORT (ogni giorno) ────────────────────────────────────
+const SPORT: Omit<Activity, 'id'>[] = [
+  { time: '09:00', title: 'Palestra', category: 'sport', duration: 60, streak: true },
+]
+
+// ─── PASTI PRE-DIETA (prima del 1 aprile) ───────────────────
+const MEALS_GENERIC: Omit<Activity, 'id'>[] = [
+  { time: '08:00', title: '☕ Colazione', category: 'routine', duration: 20, streak: false },
+  { time: '11:00', title: '🍎 Spuntino mattina', category: 'routine', duration: 10, streak: false },
+  { time: '13:30', title: '🥗 Pranzo', category: 'routine', duration: 30, streak: false },
+  { time: '16:30', title: '🍎 Spuntino pomeriggio', category: 'routine', duration: 10, streak: false },
+  { time: '20:00', title: '🍽 Cena', category: 'routine', duration: 40, streak: false },
+]
+
+// ─── PASTI DIETA IF 16:8 (dal 1 aprile) ─────────────────────
+// Genera pasti con il dettaglio specifico del giorno dal piano settimanale
+const DIET_START = '2026-04-01'
+
+function buildDietMeals(dayOfWeek: number): Omit<Activity, 'id'>[] {
+  const plan = WEEKLY_PLAN[dayOfWeek]
+
+  return [
+    {
+      time: '08:00',
+      title: '🔒 Digiuno — solo acqua, tè, caffè',
+      category: 'routine',
+      duration: 5,
+      streak: true,
+    },
+    {
+      time: '14:00',
+      title: `🥗 Pranzo — ${plan.pranzo.carb}, ${plan.pranzo.protein}`,
+      category: 'routine',
+      duration: 40,
+      streak: true,
+    },
+    {
+      time: '17:00',
+      title: `🥣 Merenda — ${plan.merenda}`,
+      category: 'routine',
+      duration: 10,
+      streak: true,
+    },
+    {
+      time: '20:00',
+      title: `🍽 Cena — ${plan.cena.protein}, ${plan.cena.verdura}`,
+      category: 'routine',
+      duration: 40,
+      streak: true,
+    },
+  ]
+}
 
 const TODAY_EXTRA: Omit<Activity, 'id'>[] = [
   { time: '15:00', title: 'Piano pillole settimanale', category: 'lavoro', duration: 60, streak: false },
@@ -61,16 +113,8 @@ const TODAY_EXTRA: Omit<Activity, 'id'>[] = [
   { time: '18:00', title: 'Newsletter — 1h focus', category: 'lavoro', duration: 60, streak: true },
 ]
 
-// Diet meal activities — replace generic meals from April 1st
-const DIET_MEALS: Omit<Activity, 'id'>[] = [
-  { time: '14:00', title: '🥗 Pranzo (dieta)', category: 'routine', duration: 40, streak: true },
-  { time: '17:00', title: '🥣 Merenda (dieta)', category: 'routine', duration: 10, streak: true },
-  { time: '20:00', title: '🍽 Cena (dieta)', category: 'routine', duration: 40, streak: true },
-]
-
-const DIET_START = '2026-04-01'
-
-export const HABIT_LIST = [...new Set(BASE_TEMPLATE.filter((a) => a.streak).map((a) => a.title))]
+// All streak habits for stats tracking
+export const HABIT_LIST = [...new Set(PILLS.filter((a) => a.streak).map((a) => a.title))]
 
 export function buildAll(saved: Record<string, Activity[]> = {}): Record<string, Activity[]> {
   const res = { ...saved }
@@ -79,6 +123,8 @@ export function buildAll(saved: Record<string, Activity[]> = {}): Record<string,
   for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
     const k = dateKey(new Date(d))
     if (res[k]) continue
+
+    // Google Calendar events
     const gcal: Activity[] = GCAL.filter((ev) => ev.date === k).map((ev, i) => ({
       ...ev,
       id: parseInt(k.replace(/-/g, '')) * 100 + 80 + i,
@@ -86,22 +132,23 @@ export function buildAll(saved: Record<string, Activity[]> = {}): Record<string,
       streak: false,
     }))
 
-    // From April 1st: use diet meals instead of generic Pranzo/Cena
+    // Build daily template: pills + sport + meals (diet or generic)
     const isDiet = k >= DIET_START
-    const template = isDiet
-      ? [
-          ...BASE_TEMPLATE.filter((a) => a.title !== 'Pranzo leggero' && a.title !== 'Cena'),
-          ...DIET_MEALS,
-        ]
-      : BASE_TEMPLATE
+    const dayOfWeek = (new Date(k).getDay() + 6) % 7 // 0=Mon
+    const meals = isDiet ? buildDietMeals(dayOfWeek) : MEALS_GENERIC
 
-    const base: Activity[] = [
-      ...template,
+    const template: Omit<Activity, 'id'>[] = [
+      ...PILLS,
+      ...SPORT,
+      ...meals,
       ...(k === '2026-03-28' ? TODAY_EXTRA : []),
-    ].map((a, i) => ({
+    ]
+
+    const base: Activity[] = template.map((a, i) => ({
       ...a,
       id: parseInt(k.replace(/-/g, '')) * 100 + i,
     }))
+
     res[k] = [...base, ...gcal]
   }
   return res
