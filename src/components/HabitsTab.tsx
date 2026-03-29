@@ -19,12 +19,18 @@ interface Props {
   onAdd: () => void
   onJournal: () => void
   onReorder: (fromIdx: number, toIdx: number) => void
-  onGoToCalendar: () => void
 }
+
+// Time-based sections
+const SECTIONS = [
+  { label: 'Mattina', from: '00:00', to: '12:00', icon: '☀️' },
+  { label: 'Pomeriggio', from: '12:00', to: '18:00', icon: '🌤' },
+  { label: 'Sera', from: '18:00', to: '23:59', icon: '🌙' },
+]
 
 export function HabitsTab({
   curDate, setCurDate, dayActs, dayChecks, done, total, rate, isToday, ck, notes, journal,
-  onToggle, onEdit, onAdd, onJournal, onReorder, onGoToCalendar,
+  onToggle, onEdit, onAdd, onJournal, onReorder,
 }: Props) {
   const nowIdx = isToday
     ? (() => {
@@ -41,7 +47,6 @@ export function HabitsTab({
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
   const dragStartY = useRef(0)
-  const dragCurrentIdx = useRef(0)
   const listRef = useRef<HTMLDivElement>(null)
   const itemHeights = useRef<number[]>([])
 
@@ -49,14 +54,11 @@ export function HabitsTab({
     e.stopPropagation()
     const touch = e.touches[0]
     dragStartY.current = touch.clientY
-    dragCurrentIdx.current = idx
     setDragIdx(idx)
     setDragOverIdx(idx)
-
-    // Measure item heights
     if (listRef.current) {
       itemHeights.current = Array.from(listRef.current.children).map(
-        (el) => (el as HTMLElement).getBoundingClientRect().height + 7 // 7px = margin-bottom
+        (el) => (el as HTMLElement).getBoundingClientRect().height + 7
       )
     }
   }, [])
@@ -66,25 +68,19 @@ export function HabitsTab({
     e.preventDefault()
     const touch = e.touches[0]
     const delta = touch.clientY - dragStartY.current
-
-    // Calculate which position we're over
     let accumulated = 0
     let targetIdx = dragIdx
     if (delta > 0) {
-      // Moving down
       for (let i = dragIdx; i < dayActs.length - 1; i++) {
         accumulated += itemHeights.current[i] || 55
-        if (delta > accumulated - (itemHeights.current[i + 1] || 55) / 2) {
-          targetIdx = i + 1
-        } else break
+        if (delta > accumulated - (itemHeights.current[i + 1] || 55) / 2) targetIdx = i + 1
+        else break
       }
     } else {
-      // Moving up
       for (let i = dragIdx; i > 0; i--) {
         accumulated -= itemHeights.current[i - 1] || 55
-        if (delta < accumulated + (itemHeights.current[i - 1] || 55) / 2) {
-          targetIdx = i - 1
-        } else break
+        if (delta < accumulated + (itemHeights.current[i - 1] || 55) / 2) targetIdx = i - 1
+        else break
       }
     }
     setDragOverIdx(targetIdx)
@@ -98,27 +94,40 @@ export function HabitsTab({
     setDragOverIdx(null)
   }, [dragIdx, dragOverIdx, onReorder])
 
+  // Group activities by time section
+  const grouped = SECTIONS.map((sec) => ({
+    ...sec,
+    acts: dayActs
+      .map((act, idx) => ({ act, idx }))
+      .filter(({ act }) => act.time >= sec.from && act.time < sec.to),
+  })).filter((g) => g.acts.length > 0)
+
   return (
     <div className="pt-3.5">
-      {/* Day header */}
+      {/* Day header with score */}
       <div className="flex justify-between items-end mb-2">
         <div>
           <div className="text-xs text-muted-1 capitalize">{fmtLong(curDate)}</div>
           <div className="text-[11px] text-muted-4 mt-px">
-            {done}/{total} completate · {rate}%{!isToday ? ' · sola lettura' : ''}
+            {done}/{total} completate{!isToday ? ' · sola lettura' : ''}
           </div>
         </div>
-        <button
-          onClick={() => setCurDate(new Date())}
-          className="text-[10px] text-muted-3 bg-card border border-border px-2 py-[3px] rounded-[7px] cursor-pointer"
-        >
-          Oggi
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="text-right">
+            <div className="text-xl font-bold leading-none">{rate}%</div>
+          </div>
+          <button
+            onClick={() => setCurDate(new Date())}
+            className="text-[10px] text-muted-3 bg-card border border-border px-2 py-[3px] rounded-[7px] cursor-pointer"
+          >
+            Oggi
+          </button>
+        </div>
       </div>
 
       {/* Progress bar */}
-      <div className="h-0.5 bg-input-bg rounded-sm mb-3.5 overflow-hidden">
-        <div className="h-full bg-white transition-all duration-500" style={{ width: `${rate}%` }} />
+      <div className="h-1 bg-input-bg rounded-full mb-4 overflow-hidden">
+        <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${rate}%` }} />
       </div>
 
       {/* Empty state */}
@@ -126,88 +135,97 @@ export function HabitsTab({
         <div className="text-center py-12 text-muted-5 text-[13px]">Nessuna attività</div>
       )}
 
-      {/* Activity list */}
+      {/* Activity list grouped by time */}
       <div ref={listRef}>
-        {dayActs.map((act, idx) => {
-          const isDone = !!dayChecks[act.id]
-          const isCur = idx === nowIdx
-          const hasNote = !!notes[`${ck}_${act.id}`]
-          const isDragging = dragIdx === idx
-          const isDropTarget = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx
+        {grouped.map((section) => (
+          <div key={section.label} className="mb-4">
+            {/* Section header */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px]">{section.icon}</span>
+              <span className="text-[11px] text-muted-2 font-semibold uppercase tracking-widest">{section.label}</span>
+              <span className="text-[10px] text-muted-4">
+                {section.acts.filter(({ act }) => dayChecks[act.id]).length}/{section.acts.length}
+              </span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
 
-          return (
-            <div
-              key={act.id}
-              className="rounded-[13px] mb-[7px] relative transition-transform duration-150"
-              style={{
-                border: `1px solid ${isDropTarget ? '#fff' : isDone ? '#1e1e1e' : isCur ? '#fff' : '#141414'}`,
-                background: isDragging ? '#151515' : isDone ? '#060606' : isCur ? '#0f0f0f' : '#0a0a0a',
-                opacity: isDragging ? 0.6 : 1,
-                transform: isDropTarget ? 'scale(1.02)' : 'scale(1)',
-              }}
-            >
-              {isCur && !isDone && (
-                <div className="absolute -top-2 left-3 bg-white text-black text-[9px] font-bold px-[7px] py-[2px] rounded-[20px]">
-                  ▶ ORA
-                </div>
-              )}
-              <div className="flex items-center gap-2 py-[11px] px-3">
-                {/* Drag handle */}
-                {isToday && (
-                  <div
-                    className="shrink-0 flex items-center justify-center w-5 h-8 cursor-grab text-muted-5 text-[11px] select-none touch-none"
-                    onTouchStart={(e) => handleDragStart(idx, e)}
-                    onTouchMove={handleDragMove}
-                    onTouchEnd={handleDragEnd}
-                  >
-                    ⋮⋮
-                  </div>
-                )}
+            {section.acts.map(({ act, idx }) => {
+              const isDone = !!dayChecks[act.id]
+              const isCur = idx === nowIdx
+              const hasNote = !!notes[`${ck}_${act.id}`]
+              const isDragging = dragIdx === idx
+              const isDropTarget = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx
 
-                {/* Check button */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); onToggle(act.id) }}
-                  className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] text-black"
+              return (
+                <div
+                  key={act.id}
+                  className="rounded-[13px] mb-[7px] relative transition-transform duration-150"
                   style={{
-                    border: `1.5px solid ${isDone ? '#fff' : isCur ? '#555' : '#1f1f1f'}`,
-                    background: isDone ? '#fff' : 'transparent',
-                    cursor: !isToday ? 'not-allowed' : 'pointer',
-                    opacity: !isToday ? 0.3 : 1,
+                    border: `1px solid ${isDropTarget ? '#fff' : isDone ? '#1e1e1e' : isCur ? '#fff' : '#141414'}`,
+                    background: isDragging ? '#151515' : isDone ? '#060606' : isCur ? '#0f0f0f' : '#0a0a0a',
+                    opacity: isDragging ? 0.6 : 1,
+                    transform: isDropTarget ? 'scale(1.02)' : 'scale(1)',
                   }}
                 >
-                  {isDone ? '✓' : ''}
-                </button>
-
-                {/* Task content — tap to edit (or go to calendar if fromCal) */}
-                <div
-                  className="flex-1 min-w-0 cursor-pointer"
-                  onClick={() => act.fromCal ? onGoToCalendar() : onEdit(act)}
-                >
-                  <div
-                    className={`text-[13px] font-medium mb-0.5 ${isDone ? 'text-[#252525] line-through' : 'text-[#e0e0e0]'}`}
-                  >
-                    {act.title}
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap items-center">
-                    <span className="text-[10px] text-muted-3">⏱{act.time}</span>
-                    <span className="text-[10px] text-muted-5">·</span>
-                    <span className="text-[10px] text-muted-3">{act.duration}min</span>
-                    <span className="text-[9px] text-muted-4 border border-border px-[5px] py-px rounded-[5px]">
-                      {act.category}
-                    </span>
-                    {act.streak && <span className="text-[9px] text-muted-3">🔥</span>}
-                    {act.fromCal && (
-                      <span className="text-[9px] text-white bg-[#1a1a1a] border border-[#333] px-1.5 py-px rounded-[5px]">
-                        da Calendar →
-                      </span>
+                  {isCur && !isDone && (
+                    <div className="absolute -top-2 left-3 bg-white text-black text-[9px] font-bold px-[7px] py-[2px] rounded-[20px]">
+                      ▶ ORA
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 py-[11px] px-3">
+                    {/* Drag handle */}
+                    {isToday && (
+                      <div
+                        className="shrink-0 flex items-center justify-center w-5 h-8 cursor-grab text-muted-5 text-[11px] select-none touch-none"
+                        onTouchStart={(e) => handleDragStart(idx, e)}
+                        onTouchMove={handleDragMove}
+                        onTouchEnd={handleDragEnd}
+                      >
+                        ⋮⋮
+                      </div>
                     )}
-                    {hasNote && <span className="text-[10px] text-muted-1">✎</span>}
+
+                    {/* Check button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggle(act.id) }}
+                      className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] text-black"
+                      style={{
+                        border: `1.5px solid ${isDone ? '#fff' : isCur ? '#555' : '#1f1f1f'}`,
+                        background: isDone ? '#fff' : 'transparent',
+                        cursor: !isToday ? 'not-allowed' : 'pointer',
+                        opacity: !isToday ? 0.3 : 1,
+                      }}
+                    >
+                      {isDone ? '✓' : ''}
+                    </button>
+
+                    {/* Task content — tap to edit */}
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(act)}>
+                      <div className={`text-[13px] font-medium mb-0.5 ${isDone ? 'text-[#252525] line-through' : 'text-[#e0e0e0]'}`}>
+                        {act.title}
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap items-center">
+                        <span className="text-[10px] text-muted-3">⏱{act.time}</span>
+                        <span className="text-[10px] text-muted-5">·</span>
+                        <span className="text-[10px] text-muted-3">{act.duration}min</span>
+                        <span className="text-[9px] text-muted-4 border border-border px-[5px] py-px rounded-[5px]">
+                          {act.category}
+                        </span>
+                        {act.streak && <span className="text-[9px] text-muted-3">🔥</span>}
+                        {act.fromCal && (
+                          <span className="text-[9px] text-white bg-[#1a1a1a] border border-[#333] px-1.5 py-px rounded-[5px]">
+                            da Calendar
+                          </span>
+                        )}
+                        {hasNote && <span className="text-[10px] text-muted-1">✎</span>}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )
-        })}
+              )
+            })}
+          </div>
+        ))}
       </div>
 
       {/* Add button */}

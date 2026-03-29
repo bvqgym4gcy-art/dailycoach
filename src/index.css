@@ -15,6 +15,7 @@ body {
 input, textarea, button {
   font-family: inherit;
   outline: none;
+  font-size: 16px; /* Prevents iOS zoom on input focus */
 }
 
 textarea {

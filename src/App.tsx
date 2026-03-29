@@ -11,6 +11,7 @@ import { StatsTab } from './components/StatsTab'
 import { ChatTab } from './components/ChatTab'
 import { AICoachTab } from './components/AICoachTab'
 import { DietTab } from './components/DietTab'
+import { requestPermission, scheduleNotifications } from './lib/notifications'
 import { MoodModal } from './components/MoodModal'
 import { JournalModal } from './components/JournalModal'
 import { AddEditModal, type EditActState } from './components/AddEditModal'
@@ -103,6 +104,17 @@ export default function App() {
   const streak = calcStreak(allActs, checks)
   const todayMood = moods[ck]
   const isToday = ck === todayKey()
+
+  // Request notification permission on first load, schedule for today
+  useEffect(() => {
+    requestPermission().then((granted) => {
+      if (granted) {
+        const tk = todayKey()
+        const todayActs = [...(allActs[tk] || [])].sort((a, b) => a.time.localeCompare(b.time))
+        scheduleNotifications(todayActs, checks[tk] || {})
+      }
+    })
+  }, [allActs, checks])
 
   // Actions
   function toggle(id: number) {
@@ -339,7 +351,6 @@ export default function App() {
             onAdd={() => { setShowAdd(true); setEditItem(null); setNewAct({ ...emptyAct, date: ck }) }}
             onJournal={() => { setJournalDraft(journal[ck]?.text || ''); setShowJournal(true) }}
             onReorder={reorderActs}
-            onGoToCalendar={() => setTab('calendar')}
           />
         )}
 

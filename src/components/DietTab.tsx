@@ -9,15 +9,44 @@ import {
   type Meal, type MealComponent, type MealVariant, type Recipe, type DietOption,
 } from '../data/diet'
 
-type Section = 'oggi' | 'settimana' | 'alternative' | 'ricette'
+type Screen = 'fasi' | 'detail'
+type Section = 'oggi' | 'settimana' | 'alternative' | 'ricette' | 'integrazione'
+
+interface Phase {
+  id: number
+  name: string
+  label: string
+  description: string
+  active: boolean
+}
+
+const PHASES: Phase[] = [
+  { id: 1, name: 'Fase 1', label: 'Cleaning', description: 'Pulizia alimentare — eliminazione tossine e reset metabolico', active: false },
+  { id: 2, name: 'Fase 2', label: 'Maintaining', description: 'Mantenimento — consolidamento abitudini e equilibrio', active: false },
+  { id: 3, name: 'Fase 3', label: 'Digiuno Intermittente', description: 'IF 16:8 — Finestra alimentare 14:00–22:00', active: true },
+]
+
+// Pills schedule data
+const PILLS_SCHEDULE = [
+  { time: '07:30', name: 'NAC 1000mg', note: 'A digiuno, con acqua', icon: '💊' },
+  { time: '08:30', name: 'Collagene', note: 'PRE-palestra', icon: '💊' },
+  { time: '09:00', name: 'Immunomix x2 + Psicobrain', note: 'Mattina', icon: '💊' },
+  { time: '10:15', name: 'Collagene', note: 'POST-palestra', icon: '💊' },
+  { time: '13:30', name: 'Omega3 + CoQ10 + Berberol', note: 'Con il pranzo', icon: '💊' },
+  { time: '16:00', name: 'Immunomix x2 + Psicobrain', note: 'Pomeriggio', icon: '💊' },
+  { time: '20:00', name: 'Omega3 + CoQ10 + Berberol + D3+K2', note: 'Con la cena', icon: '💊' },
+  { time: '22:30', name: 'Protectin', note: 'Prima di dormire', icon: '🌙' },
+]
 
 export function DietTab() {
+  const [screen, setScreen] = useState<Screen>('fasi')
+  const [selectedPhase, setSelectedPhase] = useState<Phase>(PHASES[2]) // Default to active phase
   const [section, setSection] = useState<Section>('oggi')
   const [expandedRecipe, setExpandedRecipe] = useState<number | null>(null)
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null)
 
   const today = new Date()
-  const dayIdx = (today.getDay() + 6) % 7 // 0=Mon
+  const dayIdx = (today.getDay() + 6) % 7
   const todayPlan = WEEKLY_PLAN[dayIdx]
   const dayName = DAY_NAMES[dayIdx]
 
@@ -26,17 +55,78 @@ export function DietTab() {
     ['settimana', 'Settimana'],
     ['alternative', 'Alternative'],
     ['ricette', 'Ricette'],
+    ['integrazione', 'Pillole'],
   ]
 
+  // ── FASI SCREEN ──
+  if (screen === 'fasi') {
+    return (
+      <div className="pt-3.5">
+        <div className="text-xs text-muted-2 uppercase tracking-widest mb-3">Piano Nutrizionale</div>
+
+        {PHASES.map((phase) => (
+          <button
+            key={phase.id}
+            onClick={() => { setSelectedPhase(phase); setScreen('detail'); setSection('oggi') }}
+            className="w-full bg-card border rounded-2xl p-4 mb-3 text-left cursor-pointer"
+            style={{ borderColor: phase.active ? '#fff' : '#1a1a1a' }}
+          >
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-bold text-white">{phase.name}</span>
+                <span className="text-[13px] text-muted-2">— {phase.label}</span>
+              </div>
+              {phase.active && (
+                <span className="text-[9px] bg-white text-black font-bold px-2 py-0.5 rounded-full">ATTIVA</span>
+              )}
+            </div>
+            <div className="text-[11px] text-muted-3">{phase.description}</div>
+          </button>
+        ))}
+
+        {/* Quick pills overview */}
+        <div className="bg-card border border-border rounded-2xl p-4 mt-4">
+          <div className="text-xs font-semibold text-muted-1 mb-3">💊 Integrazione giornaliera</div>
+          {PILLS_SCHEDULE.map((pill, i) => (
+            <div key={i} className="flex items-center gap-3 py-2 border-b border-[#111] last:border-0">
+              <span className="text-[10px] text-muted-3 w-10 shrink-0">{pill.time}</span>
+              <span className="text-[11px]">{pill.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] text-[#ccc]">{pill.name}</div>
+                <div className="text-[10px] text-muted-3">{pill.note}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── DETAIL SCREEN ──
   return (
     <div className="pt-3.5">
+      {/* Back + Phase title */}
+      <button
+        onClick={() => setScreen('fasi')}
+        className="text-[11px] text-muted-3 mb-3 bg-transparent border-none cursor-pointer p-0"
+      >
+        ← Fasi
+      </button>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="text-[15px] font-bold">{selectedPhase.name}</div>
+        <div className="text-[13px] text-muted-2">{selectedPhase.label}</div>
+        {selectedPhase.active && (
+          <span className="text-[9px] bg-white text-black font-bold px-2 py-0.5 rounded-full">ATTIVA</span>
+        )}
+      </div>
+
       {/* Section tabs */}
-      <div className="flex gap-[3px] mb-4">
+      <div className="flex gap-[3px] mb-4 overflow-x-auto no-scrollbar">
         {sections.map(([v, l]) => (
           <button
             key={v}
             onClick={() => setSection(v)}
-            className={`flex-1 py-1.5 px-1 rounded-[9px] text-[11px] font-semibold cursor-pointer ${
+            className={`shrink-0 py-1.5 px-3 rounded-[9px] text-[11px] font-semibold cursor-pointer ${
               section === v
                 ? 'bg-white text-black border border-white'
                 : 'bg-transparent text-muted-3 border border-transparent'
@@ -50,7 +140,6 @@ export function DietTab() {
       {/* ── OGGI ── */}
       {section === 'oggi' && (
         <div>
-          {/* Fasting status */}
           <div className="bg-card border border-border rounded-2xl p-4 mb-3">
             <div className="text-xs font-semibold text-muted-1 mb-1">⏱ Digiuno Intermittente 16:8</div>
             <div className="text-[11px] text-muted-3 mb-2">Finestra alimentare: 14:00 – 22:00</div>
@@ -63,50 +152,16 @@ export function DietTab() {
             </div>
           </div>
 
-          {/* Today's plan */}
           <div className="text-xs text-muted-2 uppercase tracking-widest mb-2">{dayName} — Il tuo piano</div>
 
-          {/* Pranzo */}
-          <MealCard
-            icon="🥗"
-            title="Pranzo"
-            time="14:00"
-            items={[
-              todayPlan.pranzo.carb,
-              todayPlan.pranzo.protein,
-              todayPlan.pranzo.verdura,
-              'Olio EVO 2 cucchiai (20g)',
-            ]}
-          />
+          <MealCard icon="🥗" title="Pranzo" time="14:00" items={[todayPlan.pranzo.carb, todayPlan.pranzo.protein, todayPlan.pranzo.verdura, 'Olio EVO 2 cucchiai (20g)']} />
+          <MealCard icon="🥣" title="Merenda" time="17:00" items={[todayPlan.merenda]} />
+          <MealCard icon="🍽" title="Cena" time="20:00" items={['Pane di grano duro 3 fette (90g)', todayPlan.cena.protein, todayPlan.cena.verdura, 'Olio EVO 1.5 cucchiai (15g)']} />
 
-          {/* Merenda */}
-          <MealCard
-            icon="🥣"
-            title="Merenda"
-            time="17:00"
-            items={[todayPlan.merenda]}
-          />
-
-          {/* Cena */}
-          <MealCard
-            icon="🍽"
-            title="Cena"
-            time="20:00"
-            items={[
-              'Pane di grano duro 3 fette (90g)',
-              todayPlan.cena.protein,
-              todayPlan.cena.verdura,
-              'Olio EVO 1.5 cucchiai (15g)',
-            ]}
-          />
-
-          {/* Daily drinks */}
           <div className="bg-card border border-border rounded-2xl p-4 mt-3">
             <div className="text-xs font-semibold text-muted-1 mb-2">☕ Durante la giornata</div>
             {DIET_RULES.dailyDrinks.map((d) => (
-              <div key={d.name} className="text-[12px] text-muted-3 mb-1">
-                {d.name} — {d.qty}
-              </div>
+              <div key={d.name} className="text-[12px] text-muted-3 mb-1">{d.name} — {d.qty}</div>
             ))}
           </div>
         </div>
@@ -120,25 +175,15 @@ export function DietTab() {
             const expanded = expandedMeal === DAY_NAMES[i]
             return (
               <div key={i} className="mb-2">
-                <button
-                  onClick={() => setExpandedMeal(expanded ? null : DAY_NAMES[i])}
-                  className="w-full bg-card border rounded-2xl p-3.5 text-left cursor-pointer"
-                  style={{ borderColor: isToday ? '#fff' : '#1a1a1a' }}
-                >
+                <button onClick={() => setExpandedMeal(expanded ? null : DAY_NAMES[i])} className="w-full bg-card border rounded-2xl p-3.5 text-left cursor-pointer" style={{ borderColor: isToday ? '#fff' : '#1a1a1a' }}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       {isToday && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      <span className={`text-[13px] font-semibold ${isToday ? 'text-white' : 'text-muted-3'}`}>
-                        {DAY_NAMES[i]}
-                      </span>
+                      <span className={`text-[13px] font-semibold ${isToday ? 'text-white' : 'text-muted-3'}`}>{DAY_NAMES[i]}</span>
                     </div>
                     <span className="text-[11px] text-muted-3">{expanded ? '▾' : '▸'}</span>
                   </div>
-                  {!expanded && (
-                    <div className="text-[11px] text-muted-3 mt-1.5 truncate">
-                      {day.pranzo.protein} · {day.cena.protein}
-                    </div>
-                  )}
+                  {!expanded && <div className="text-[11px] text-muted-3 mt-1.5 truncate">{day.pranzo.protein} · {day.cena.protein}</div>}
                 </button>
                 {expanded && (
                   <div className="bg-card border border-border rounded-xl p-3 mt-1 ml-2 mr-2">
@@ -168,13 +213,46 @@ export function DietTab() {
       {section === 'ricette' && (
         <div>
           {RECIPES.map((recipe, i) => (
-            <RecipeCard
-              key={i}
-              recipe={recipe}
-              expanded={expandedRecipe === i}
-              onToggle={() => setExpandedRecipe(expandedRecipe === i ? null : i)}
-            />
+            <RecipeCard key={i} recipe={recipe} expanded={expandedRecipe === i} onToggle={() => setExpandedRecipe(expandedRecipe === i ? null : i)} />
           ))}
+        </div>
+      )}
+
+      {/* ── INTEGRAZIONE (PILLOLE) ── */}
+      {section === 'integrazione' && (
+        <div>
+          <div className="text-xs text-muted-2 uppercase tracking-widest mb-3">Schema integrazione giornaliero</div>
+
+          {/* Timeline */}
+          {PILLS_SCHEDULE.map((pill, i) => (
+            <div key={i} className="flex gap-3 mb-1">
+              <div className="flex flex-col items-center">
+                <div className="w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center text-[12px]">
+                  {pill.icon}
+                </div>
+                {i < PILLS_SCHEDULE.length - 1 && <div className="w-px flex-1 bg-border" />}
+              </div>
+              <div className="bg-card border border-border rounded-xl p-3 flex-1 mb-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[13px] font-semibold text-white">{pill.name}</span>
+                  <span className="text-[10px] text-muted-3 bg-input-bg border border-muted-6 px-2 py-0.5 rounded-md">{pill.time}</span>
+                </div>
+                <div className="text-[11px] text-muted-3">{pill.note}</div>
+              </div>
+            </div>
+          ))}
+
+          {/* Notes */}
+          <div className="bg-card border border-border rounded-2xl p-4 mt-4">
+            <div className="text-xs font-semibold text-muted-1 mb-2">Note importanti</div>
+            <div className="text-[11px] text-muted-3 leading-relaxed">
+              • NAC va preso rigorosamente a digiuno<br />
+              • Collagene: una dose PRE e una POST palestra<br />
+              • Omega3+CoQ10+Berberol: sempre durante i pasti<br />
+              • D3+K2: solo a cena<br />
+              • Protectin: ultima cosa prima di dormire
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -187,17 +265,11 @@ function MealCard({ icon, title, time, items }: { icon: string; title: string; t
   return (
     <div className="bg-card border border-border rounded-2xl p-4 mb-2">
       <div className="flex justify-between items-center mb-2">
-        <div className="text-[13px] font-semibold">
-          {icon} {title}
-        </div>
-        <div className="text-[10px] text-muted-3 bg-input-bg border border-muted-6 px-2 py-0.5 rounded-md">
-          {time}
-        </div>
+        <div className="text-[13px] font-semibold">{icon} {title}</div>
+        <div className="text-[10px] text-muted-3 bg-input-bg border border-muted-6 px-2 py-0.5 rounded-md">{time}</div>
       </div>
       {items.map((item, i) => (
-        <div key={i} className="text-[12px] text-muted-2 py-[3px] border-b border-[#111] last:border-0">
-          {item}
-        </div>
+        <div key={i} className="text-[12px] text-muted-2 py-[3px] border-b border-[#111] last:border-0">{item}</div>
       ))}
     </div>
   )
@@ -207,55 +279,32 @@ function MealLine({ icon, label, items }: { icon: string; label: string; items: 
   return (
     <div className="mb-3 last:mb-0">
       <div className="text-[11px] text-muted-2 font-semibold mb-1">{icon} {label}</div>
-      {items.map((item, i) => (
-        <div key={i} className="text-[11px] text-muted-3 ml-4 mb-px">{item}</div>
-      ))}
+      {items.map((item, i) => (<div key={i} className="text-[11px] text-muted-3 ml-4 mb-px">{item}</div>))}
     </div>
   )
 }
 
-function AlternativeSection({ meal, variants, extraLabel, extraOptions }: {
-  meal: Meal
-  variants: MealVariant[]
-  extraLabel?: string
-  extraOptions?: DietOption[]
-}) {
+function AlternativeSection({ meal, variants, extraLabel, extraOptions }: { meal: Meal; variants: MealVariant[]; extraLabel?: string; extraOptions?: DietOption[] }) {
   return (
     <div>
       <div className="text-xs font-bold text-white mb-3">{meal.name} — {meal.time}</div>
       {meal.note && <div className="text-[10px] text-muted-3 italic mb-3">{meal.note}</div>}
-
-      {meal.components.map((comp) => (
-        <ComponentBlock key={comp.label} comp={comp} />
-      ))}
-
+      {meal.components.map((comp) => (<ComponentBlock key={comp.label} comp={comp} />))}
       {variants.length > 0 && (
         <div className="mt-3">
           {variants.map((v, i) => (
             <div key={i} className="bg-input-bg border border-border rounded-xl p-3 mb-2">
-              <div className="text-[11px] font-semibold text-muted-2 mb-1">
-                {v.name}
-                {v.frequency && <span className="text-muted-3 font-normal ml-1">({v.frequency})</span>}
-              </div>
-              {v.components.map((c, j) => (
-                <div key={j} className="text-[11px] text-muted-3 ml-2">
-                  {c.item.name} — {c.item.qty}
-                </div>
-              ))}
+              <div className="text-[11px] font-semibold text-muted-2 mb-1">{v.name}{v.frequency && <span className="text-muted-3 font-normal ml-1">({v.frequency})</span>}</div>
+              {v.components.map((c, j) => (<div key={j} className="text-[11px] text-muted-3 ml-2">{c.item.name} — {c.item.qty}</div>))}
             </div>
           ))}
         </div>
       )}
-
       {extraLabel && extraOptions && (
         <div className="mt-2">
           <div className="text-[11px] text-muted-2 font-semibold mb-1.5">{extraLabel}</div>
           <div className="grid grid-cols-2 gap-1">
-            {extraOptions.map((opt, i) => (
-              <div key={i} className="text-[10px] text-muted-3 bg-input-bg rounded-lg px-2 py-1.5">
-                {opt.name} — {opt.qty}
-              </div>
-            ))}
+            {extraOptions.map((opt, i) => (<div key={i} className="text-[10px] text-muted-3 bg-input-bg rounded-lg px-2 py-1.5">{opt.name} — {opt.qty}</div>))}
           </div>
         </div>
       )}
@@ -265,7 +314,6 @@ function AlternativeSection({ meal, variants, extraLabel, extraOptions }: {
 
 function ComponentBlock({ comp }: { comp: MealComponent }) {
   const [open, setOpen] = useState(false)
-
   if (comp.alternatives.length === 0) {
     return (
       <div className="mb-2">
@@ -274,13 +322,9 @@ function ComponentBlock({ comp }: { comp: MealComponent }) {
       </div>
     )
   }
-
   return (
     <div className="mb-3">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
-      >
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-1 cursor-pointer bg-transparent border-none p-0">
         <span className="text-[11px] text-muted-2 font-semibold">{comp.label}</span>
         <span className="text-[9px] text-muted-3">{open ? '▾' : '▸'} {comp.alternatives.length} alt.</span>
       </button>
@@ -303,19 +347,12 @@ function ComponentBlock({ comp }: { comp: MealComponent }) {
 function RecipeCard({ recipe, expanded, onToggle }: { recipe: Recipe; expanded: boolean; onToggle: () => void }) {
   return (
     <div className="bg-card border border-border rounded-2xl mb-3 overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full p-4 text-left cursor-pointer bg-transparent border-none"
-      >
+      <button onClick={onToggle} className="w-full p-4 text-left cursor-pointer bg-transparent border-none">
         <div className="flex justify-between items-center">
           <div className="text-[13px] font-semibold text-white">{recipe.name}</div>
           <span className="text-[11px] text-muted-3">{expanded ? '▾' : '▸'}</span>
         </div>
-        {!expanded && (
-          <div className="text-[10px] text-muted-3 mt-1">
-            {recipe.ingredients.length} ingredienti · Tap per dettagli
-          </div>
-        )}
+        {!expanded && <div className="text-[10px] text-muted-3 mt-1">{recipe.ingredients.length} ingredienti · Tap per dettagli</div>}
       </button>
       {expanded && (
         <div className="px-4 pb-4">
