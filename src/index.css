@@ -21,11 +21,20 @@ textarea {
   resize: none;
 }
 
-/* Scrollbar hide for chat */
+/* Scrollbar hide */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Day strip: force horizontal scroll on iOS */
+.day-strip {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
 }

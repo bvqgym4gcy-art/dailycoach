@@ -87,8 +87,7 @@ export function Header({ tab, setTab, curDate, setCurDate, ck, history, streak, 
       {tab === 'today' && (
         <div
           ref={scrollRef}
-          className="flex gap-1.5 mb-2.5 overflow-x-auto no-scrollbar"
-          style={{ scrollSnapType: 'x mandatory' }}
+          className="flex gap-1.5 mb-2.5 no-scrollbar day-strip"
         >
           {stripDates.map((d, i) => {
             const k = dateKey(d)
