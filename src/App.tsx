@@ -360,6 +360,15 @@ export default function App() {
         )}
       </div>
 
+      {/* FAB — add activity */}
+      <button
+        onClick={() => { setShowAdd(true); setEditItem(null); setNewAct({ ...emptyAct, date: ck }) }}
+        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-white text-black text-2xl font-light flex items-center justify-center shadow-lg cursor-pointer z-30 border-none"
+        style={{ maxWidth: 480, lineHeight: 1 }}
+      >
+        +
+      </button>
+
       {showMood && <MoodModal todayMood={todayMood} onSave={saveMood} onClose={() => setShowMood(false)} />}
       {showJournal && <JournalModal ck={ck} draft={journalDraft} setDraft={setJournalDraft} onSave={saveJournalEntry} onClose={() => setShowJournal(false)} />}
       {showAdd && <AddEditModal editItem={editItem} newAct={newAct} setNewAct={setNewAct} onSave={saveAct} onDelete={editItem ? () => delAct(editItem.id) : null} onClose={() => { setShowAdd(false); setEditItem(null) }} />}
