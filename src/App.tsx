@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
 import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData } from './types'
 import { dbLoad, dbSave } from './lib/db'
-import { dateKey, todayKey, calcStreak } from './lib/utils'
+import { dateKey, todayKey, calcStreak, addDays } from './lib/utils'
 import { buildAll, HABIT_LIST } from './data/activities'
 import { MOODS } from './config'
 import { Header } from './components/Header'
@@ -250,6 +250,34 @@ export default function App() {
     return 'Journal salvato.'
   }
 
+  // Swipe to change day
+  const swipeStartX = useRef(0)
+  const swipeStartY = useRef(0)
+  const swiping = useRef(false)
+
+  function onTouchStart(e: ReactTouchEvent) {
+    swipeStartX.current = e.touches[0].clientX
+    swipeStartY.current = e.touches[0].clientY
+    swiping.current = true
+  }
+
+  function onTouchEnd(e: ReactTouchEvent) {
+    if (!swiping.current) return
+    swiping.current = false
+    const dx = e.changedTouches[0].clientX - swipeStartX.current
+    const dy = e.changedTouches[0].clientY - swipeStartY.current
+    // Only trigger if horizontal swipe > 80px and more horizontal than vertical
+    if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) {
+        // Swipe left → next day
+        setCurDate(addDays(curDate, 1))
+      } else {
+        // Swipe right → previous day
+        setCurDate(addDays(curDate, -1))
+      }
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4">
@@ -275,7 +303,7 @@ export default function App() {
         isToday={isToday}
       />
 
-      <div className="px-5 pb-[100px]">
+      <div className="px-5 pb-[100px]" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {tab === 'today' && (
           <HabitsTab
             curDate={curDate}
