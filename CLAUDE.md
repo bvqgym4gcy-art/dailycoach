@@ -108,6 +108,7 @@ RLS abilitato con policy "Allow all".
 Le attività giornaliere vengono generate da `buildAll()` in `src/data/activities.ts`:
 - **Range attivo:** 28 marzo 2026 → 30 aprile 2026
 - **BASE template:** 11 attività (pillole + palestra + pasti) — si ripete ogni giorno nel range
+- **DIET_MEALS:** dal 1 aprile 2026 i pasti generici (Pranzo leggero, Cena) vengono sostituiti con 3 attività dieta (Pranzo 14:00, Merenda 17:00, Cena 20:00) con streak attivo
 - **GCAL:** eventi importati staticamente da Google Calendar (badge "cal", non modificabili)
 - **TODAY_EXTRA:** 4 attività extra solo per il 28 marzo 2026
 - Fuori dal range → giornata vuota
@@ -230,8 +231,38 @@ Il deploy è **automatico**:
 | **Habits** | Lista attività del giorno, toggle check, journal, add/edit/delete |
 | **Calendar** | Calendario mensile con indicatori, records 30 giorni |
 | **Stats** | Grafici 14gg, streak per abitudine, umore 7 giorni, summary cards |
+| **Dieta** | Piano alimentare IF 16:8 — oggi, settimana, alternative, ricette |
 | **Chat** | Chat con AI Coach — analisi + azioni (tool use) |
-| **AI Coach** | 3 insight proattivi generati su richiesta |
+| **AI** | 3 insight proattivi generati su richiesta |
+
+---
+
+## Sezione Dieta
+
+Basata sul piano del **Dott. Luca Musella** (Kairoo Studio di Nutrizione Clinica).
+Dati in `src/data/diet.ts`, componente in `src/components/DietTab.tsx`.
+
+### Digiuno Intermittente 16:8
+
+- **Digiuno:** 22:00 → 14:00 (solo acqua, tè, caffè senza zucchero)
+- **Finestra alimentare:** 14:00 → 22:00
+- 3 pasti: Pranzo (14:00), Merenda (17:00), Cena (20:00)
+
+### Sub-sezioni
+
+| Sezione | Contenuto |
+|---------|-----------|
+| **Oggi** | Piano del giorno con stato digiuno live, 3 pasti dettagliati |
+| **Settimana** | Piano 7 giorni pre-generato con varietà automatica |
+| **Alternative** | Tutte le alternative per ogni componente (carb, proteine, verdure) con quantità e frequenze |
+| **Ricette** | 4 ricette con ingredienti e procedimento |
+
+### Attività Dieta nel template
+
+Dal 1 aprile 2026, le attività "Pranzo leggero" e "Cena" vengono sostituite con:
+- 🥗 Pranzo (dieta) — 14:00, streak attivo
+- 🥣 Merenda (dieta) — 17:00, streak attivo
+- 🍽 Cena (dieta) — 20:00, streak attivo
 
 ---
 
