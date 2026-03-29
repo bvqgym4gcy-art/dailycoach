@@ -61,6 +61,15 @@ const TODAY_EXTRA: Omit<Activity, 'id'>[] = [
   { time: '18:00', title: 'Newsletter — 1h focus', category: 'lavoro', duration: 60, streak: true },
 ]
 
+// Diet meal activities — replace generic meals from April 1st
+const DIET_MEALS: Omit<Activity, 'id'>[] = [
+  { time: '14:00', title: '🥗 Pranzo (dieta)', category: 'routine', duration: 40, streak: true },
+  { time: '17:00', title: '🥣 Merenda (dieta)', category: 'routine', duration: 10, streak: true },
+  { time: '20:00', title: '🍽 Cena (dieta)', category: 'routine', duration: 40, streak: true },
+]
+
+const DIET_START = '2026-04-01'
+
 export const HABIT_LIST = [...new Set(BASE_TEMPLATE.filter((a) => a.streak).map((a) => a.title))]
 
 export function buildAll(saved: Record<string, Activity[]> = {}): Record<string, Activity[]> {
@@ -76,8 +85,18 @@ export function buildAll(saved: Record<string, Activity[]> = {}): Record<string,
       fromCal: true,
       streak: false,
     }))
+
+    // From April 1st: use diet meals instead of generic Pranzo/Cena
+    const isDiet = k >= DIET_START
+    const template = isDiet
+      ? [
+          ...BASE_TEMPLATE.filter((a) => a.title !== 'Pranzo leggero' && a.title !== 'Cena'),
+          ...DIET_MEALS,
+        ]
+      : BASE_TEMPLATE
+
     const base: Activity[] = [
-      ...BASE_TEMPLATE,
+      ...template,
       ...(k === '2026-03-28' ? TODAY_EXTRA : []),
     ].map((a, i) => ({
       ...a,

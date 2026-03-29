@@ -21,8 +21,9 @@ const TABS: [Tab, string][] = [
   ['today', 'Habits'],
   ['calendar', 'Calendar'],
   ['stats', 'Stats'],
+  ['diet', 'Dieta'],
   ['chat', 'Chat'],
-  ['ai', 'AI Coach'],
+  ['ai', 'AI'],
 ]
 
 export function Header({ tab, setTab, curDate, setCurDate, weekDates, ck, history, streak, todayMood, saveStatus, onMoodClick, isToday }: Props) {

@@ -10,6 +10,7 @@ import { CalendarTab } from './components/CalendarTab'
 import { StatsTab } from './components/StatsTab'
 import { ChatTab } from './components/ChatTab'
 import { AICoachTab } from './components/AICoachTab'
+import { DietTab } from './components/DietTab'
 import { MoodModal } from './components/MoodModal'
 import { NoteModal } from './components/NoteModal'
 import { JournalModal } from './components/JournalModal'
@@ -294,6 +295,8 @@ export default function App() {
             checks={checks}
           />
         )}
+
+        {tab === 'diet' && <DietTab />}
 
         {tab === 'chat' && (
           <ChatTab
