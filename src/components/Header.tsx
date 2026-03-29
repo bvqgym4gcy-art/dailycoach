@@ -22,6 +22,7 @@ const TABS: [Tab, string][] = [
   ['calendar', 'Calendar'],
   ['stats', 'Stats'],
   ['diet', 'Dieta'],
+  ['life', 'Life'],
   ['chat', 'Chat'],
   ['ai', 'AI'],
 ]

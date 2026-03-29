@@ -34,7 +34,7 @@ export interface AIInsight {
   text: string
 }
 
-export type Tab = 'today' | 'calendar' | 'stats' | 'diet' | 'chat' | 'ai'
+export type Tab = 'today' | 'calendar' | 'stats' | 'diet' | 'life' | 'chat' | 'ai'
 export type Category = Activity['category']
 
 export interface DayMealPlan {

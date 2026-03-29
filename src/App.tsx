@@ -11,6 +11,7 @@ import { StatsTab } from './components/StatsTab'
 import { ChatTab } from './components/ChatTab'
 import { AICoachTab } from './components/AICoachTab'
 import { DietTab } from './components/DietTab'
+import { LifeTab } from './components/LifeTab'
 import { requestPermission, scheduleNotifications } from './lib/notifications'
 import { MoodModal } from './components/MoodModal'
 import { JournalModal } from './components/JournalModal'
@@ -346,6 +347,7 @@ export default function App() {
             ck={ck}
             notes={notes}
             journal={journal}
+            history={history}
             onToggle={toggle}
             onEdit={(act) => { setEditItem(act); setNewAct({ date: ck, time: act.time, title: act.title, category: act.category, duration: act.duration, streak: !!act.streak, note: notes[`${ck}_${act.id}`] || '' }); setShowAdd(true) }}
             onAdd={() => { setShowAdd(true); setEditItem(null); setNewAct({ ...emptyAct, date: ck }) }}
@@ -381,6 +383,8 @@ export default function App() {
         )}
 
         {tab === 'diet' && <DietTab />}
+
+        {tab === 'life' && <LifeTab />}
 
         {tab === 'chat' && (
           <ChatTab
