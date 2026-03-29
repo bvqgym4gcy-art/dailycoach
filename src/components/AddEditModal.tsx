@@ -1,29 +1,45 @@
 import type { Activity } from '../types'
 import { CATS } from '../config'
 
-interface NewActState {
+export interface EditActState {
+  date: string
   time: string
   title: string
   category: Activity['category']
   duration: number
   streak: boolean
+  note: string
 }
 
 interface Props {
   editItem: Activity | null
-  newAct: NewActState
-  setNewAct: (fn: (n: NewActState) => NewActState) => void
+  newAct: EditActState
+  setNewAct: (fn: (n: EditActState) => EditActState) => void
   onSave: () => void
+  onDelete: (() => void) | null
   onClose: () => void
 }
 
-export function AddEditModal({ editItem, newAct, setNewAct, onSave, onClose }: Props) {
+export function AddEditModal({ editItem, newAct, setNewAct, onSave, onDelete, onClose }: Props) {
   return (
     <div onClick={onClose} className="fixed inset-0 bg-black/90 z-50 flex items-end justify-center">
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[480px] bg-card border border-input-border rounded-t-[20px] p-6">
-        <div className="text-[15px] font-bold mb-3.5">{editItem ? 'Modifica' : 'Nuova attività'}</div>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[480px] bg-card border border-input-border rounded-t-[20px] p-6 max-h-[85vh] overflow-y-auto"
+      >
+        <div className="text-[15px] font-bold mb-3.5">{editItem ? 'Modifica attività' : 'Nuova attività'}</div>
 
+        {/* Date + Time */}
         <div className="grid grid-cols-2 gap-2.5 mb-3">
+          <div>
+            <span className="text-[11px] text-muted-2 uppercase tracking-widest mb-2 block">Giorno</span>
+            <input
+              type="date"
+              value={newAct.date}
+              onChange={(e) => setNewAct((n) => ({ ...n, date: e.target.value }))}
+              className="w-full bg-input-bg border border-input-border rounded-[10px] px-3 py-2.5 text-white text-sm"
+            />
+          </div>
           <div>
             <span className="text-[11px] text-muted-2 uppercase tracking-widest mb-2 block">Orario</span>
             <input
@@ -33,17 +49,9 @@ export function AddEditModal({ editItem, newAct, setNewAct, onSave, onClose }: P
               className="w-full bg-input-bg border border-input-border rounded-[10px] px-3 py-2.5 text-white text-sm"
             />
           </div>
-          <div>
-            <span className="text-[11px] text-muted-2 uppercase tracking-widest mb-2 block">Durata (min)</span>
-            <input
-              type="number"
-              value={newAct.duration}
-              onChange={(e) => setNewAct((n) => ({ ...n, duration: parseInt(e.target.value) || 30 }))}
-              className="w-full bg-input-bg border border-input-border rounded-[10px] px-3 py-2.5 text-white text-sm"
-            />
-          </div>
         </div>
 
+        {/* Title */}
         <div className="mb-3">
           <span className="text-[11px] text-muted-2 uppercase tracking-widest mb-2 block">Nome</span>
           <input
@@ -55,6 +63,18 @@ export function AddEditModal({ editItem, newAct, setNewAct, onSave, onClose }: P
           />
         </div>
 
+        {/* Duration */}
+        <div className="mb-3">
+          <span className="text-[11px] text-muted-2 uppercase tracking-widest mb-2 block">Durata (min)</span>
+          <input
+            type="number"
+            value={newAct.duration}
+            onChange={(e) => setNewAct((n) => ({ ...n, duration: parseInt(e.target.value) || 30 }))}
+            className="w-full bg-input-bg border border-input-border rounded-[10px] px-3 py-2.5 text-white text-sm"
+          />
+        </div>
+
+        {/* Category */}
         <div className="mb-3">
           <span className="text-[11px] text-muted-2 uppercase tracking-widest mb-2 block">Categoria</span>
           <div className="flex gap-[5px] flex-wrap">
@@ -75,6 +95,7 @@ export function AddEditModal({ editItem, newAct, setNewAct, onSave, onClose }: P
           </div>
         </div>
 
+        {/* Streak toggle */}
         <button
           onClick={() => setNewAct((n) => ({ ...n, streak: !n.streak }))}
           className="w-full p-[11px] mb-3 rounded-[11px] text-xs font-medium cursor-pointer"
@@ -87,6 +108,19 @@ export function AddEditModal({ editItem, newAct, setNewAct, onSave, onClose }: P
           🔥 {newAct.streak ? 'Streak attivo' : 'Attiva streak'}
         </button>
 
+        {/* Note */}
+        <div className="mb-3">
+          <span className="text-[11px] text-muted-2 uppercase tracking-widest mb-2 block">Nota</span>
+          <textarea
+            value={newAct.note}
+            onChange={(e) => setNewAct((n) => ({ ...n, note: e.target.value }))}
+            placeholder="Aggiungi una nota..."
+            rows={3}
+            className="w-full bg-input-bg border border-input-border rounded-[10px] px-3 py-2.5 text-white text-sm h-[80px]"
+          />
+        </div>
+
+        {/* Action buttons */}
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 p-3.5 bg-input-bg border border-input-border rounded-xl text-muted-1 text-sm cursor-pointer">
             Annulla
@@ -95,6 +129,16 @@ export function AddEditModal({ editItem, newAct, setNewAct, onSave, onClose }: P
             {editItem ? 'Salva' : 'Aggiungi'}
           </button>
         </div>
+
+        {/* Delete button */}
+        {editItem && onDelete && (
+          <button
+            onClick={onDelete}
+            className="w-full mt-3 p-3 rounded-xl text-[12px] text-[#555] border border-[#1a1a1a] bg-transparent cursor-pointer"
+          >
+            Elimina attività
+          </button>
+        )}
       </div>
     </div>
   )

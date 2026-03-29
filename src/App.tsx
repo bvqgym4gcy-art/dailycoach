@@ -12,10 +12,8 @@ import { ChatTab } from './components/ChatTab'
 import { AICoachTab } from './components/AICoachTab'
 import { DietTab } from './components/DietTab'
 import { MoodModal } from './components/MoodModal'
-import { NoteModal } from './components/NoteModal'
 import { JournalModal } from './components/JournalModal'
-import { AddEditModal } from './components/AddEditModal'
-import { DeleteModal } from './components/DeleteModal'
+import { AddEditModal, type EditActState } from './components/AddEditModal'
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -33,10 +31,8 @@ export default function App() {
   // Modal state
   const [showAdd, setShowAdd] = useState(false)
   const [editItem, setEditItem] = useState<Activity | null>(null)
-  const [newAct, setNewAct] = useState({ time: '', title: '', category: 'routine' as Activity['category'], duration: 30, streak: false })
-  const [delId, setDelId] = useState<number | null>(null)
-  const [noteAct, setNoteAct] = useState<Activity | null>(null)
-  const [noteDraft, setNoteDraft] = useState('')
+  const emptyAct: EditActState = { date: '', time: '', title: '', category: 'routine', duration: 30, streak: false, note: '' }
+  const [newAct, setNewAct] = useState<EditActState>(emptyAct)
   const [showMood, setShowMood] = useState(false)
   const [showJournal, setShowJournal] = useState(false)
   const [journalDraft, setJournalDraft] = useState('')
@@ -118,22 +114,67 @@ export default function App() {
 
   function saveAct() {
     if (!newAct.title || !newAct.time) return
-    const list = [...(allActs[ck] || [])]
-    const updated = editItem
-      ? list.map((x) => (x.id === editItem.id ? { ...editItem, ...newAct } : x))
-      : [...list, { ...newAct, id: Date.now() } as Activity]
-    const na = { ...allActs, [ck]: updated }
+    const targetDate = newAct.date || ck
+    const actData = { time: newAct.time, title: newAct.title, category: newAct.category, duration: newAct.duration, streak: newAct.streak }
+    let na = { ...allActs }
+    let nn = { ...notes }
+
+    if (editItem) {
+      // Editing existing — check if date changed
+      if (targetDate !== ck) {
+        // Move to different day: remove from current, add to target
+        na[ck] = (na[ck] || []).filter((x) => x.id !== editItem.id)
+        na[targetDate] = [...(na[targetDate] || []), { ...editItem, ...actData }]
+        // Move note if exists
+        const oldNoteKey = `${ck}_${editItem.id}`
+        const newNoteKey = `${targetDate}_${editItem.id}`
+        if (nn[oldNoteKey]) {
+          nn[newNoteKey] = nn[oldNoteKey]
+          delete nn[oldNoteKey]
+        }
+      } else {
+        na[ck] = (na[ck] || []).map((x) => (x.id === editItem.id ? { ...editItem, ...actData } : x))
+      }
+      // Save note
+      const noteKey = `${targetDate}_${editItem.id}`
+      if (newAct.note.trim()) {
+        nn[noteKey] = newAct.note
+      } else {
+        delete nn[noteKey]
+      }
+    } else {
+      // New activity
+      const newId = Date.now()
+      na[targetDate] = [...(na[targetDate] || []), { ...actData, id: newId } as Activity]
+      if (newAct.note.trim()) {
+        nn[`${targetDate}_${newId}`] = newAct.note
+      }
+    }
+
     setAllActs(na)
+    setNotes(nn)
     setShowAdd(false)
     setEditItem(null)
-    setNewAct({ time: '', title: '', category: 'routine', duration: 30, streak: false })
-    persist(checks, history, notes, moods, na, journal)
+    setNewAct(emptyAct)
+    persist(checks, history, nn, moods, na, journal)
   }
 
   function delAct(id: number) {
     const na = { ...allActs, [ck]: (allActs[ck] || []).filter((x) => x.id !== id) }
     setAllActs(na)
-    setDelId(null)
+    setShowAdd(false)
+    setEditItem(null)
+    setNewAct(emptyAct)
+    persist(checks, history, notes, moods, na, journal)
+  }
+
+  function reorderActs(fromIdx: number, toIdx: number) {
+    const list = [...(allActs[ck] || [])]
+    const sorted = [...list].sort((a, b) => a.time.localeCompare(b.time))
+    const [moved] = sorted.splice(fromIdx, 1)
+    sorted.splice(toIdx, 0, moved)
+    const na = { ...allActs, [ck]: sorted }
+    setAllActs(na)
     persist(checks, history, notes, moods, na, journal)
   }
 
@@ -144,13 +185,6 @@ export default function App() {
     persist(checks, history, notes, nm, allActs, journal)
   }
 
-  function saveNote() {
-    if (!noteAct) return
-    const nn = { ...notes, [`${ck}_${noteAct.id}`]: noteDraft }
-    setNotes(nn)
-    setNoteAct(null)
-    persist(checks, history, nn, moods, allActs, journal)
-  }
 
   function saveJournalEntry() {
     if (!journalDraft.trim()) return
@@ -256,11 +290,10 @@ export default function App() {
             notes={notes}
             journal={journal}
             onToggle={toggle}
-            onNote={(act) => { setNoteAct(act); setNoteDraft(notes[`${ck}_${act.id}`] || '') }}
-            onEdit={(act) => { setEditItem(act); setNewAct({ time: act.time, title: act.title, category: act.category, duration: act.duration, streak: !!act.streak }); setShowAdd(true) }}
-            onDelete={(id) => setDelId(id)}
-            onAdd={() => { setShowAdd(true); setEditItem(null); setNewAct({ time: '', title: '', category: 'routine', duration: 30, streak: false }) }}
+            onEdit={(act) => { setEditItem(act); setNewAct({ date: ck, time: act.time, title: act.title, category: act.category, duration: act.duration, streak: !!act.streak, note: notes[`${ck}_${act.id}`] || '' }); setShowAdd(true) }}
+            onAdd={() => { setShowAdd(true); setEditItem(null); setNewAct({ ...emptyAct, date: ck }) }}
             onJournal={() => { setJournalDraft(journal[ck]?.text || ''); setShowJournal(true) }}
+            onReorder={reorderActs}
           />
         )}
 
@@ -328,10 +361,8 @@ export default function App() {
       </div>
 
       {showMood && <MoodModal todayMood={todayMood} onSave={saveMood} onClose={() => setShowMood(false)} />}
-      {noteAct && <NoteModal act={noteAct} curDate={curDate} draft={noteDraft} setDraft={setNoteDraft} onSave={saveNote} onClose={() => setNoteAct(null)} />}
       {showJournal && <JournalModal ck={ck} draft={journalDraft} setDraft={setJournalDraft} onSave={saveJournalEntry} onClose={() => setShowJournal(false)} />}
-      {showAdd && <AddEditModal editItem={editItem} newAct={newAct} setNewAct={setNewAct} onSave={saveAct} onClose={() => { setShowAdd(false); setEditItem(null) }} />}
-      {delId !== null && <DeleteModal onConfirm={() => delAct(delId)} onClose={() => setDelId(null)} />}
+      {showAdd && <AddEditModal editItem={editItem} newAct={newAct} setNewAct={setNewAct} onSave={saveAct} onDelete={editItem ? () => delAct(editItem.id) : null} onClose={() => { setShowAdd(false); setEditItem(null) }} />}
     </div>
   )
 }
