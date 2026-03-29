@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData } from './types'
 import { dbLoad, dbSave } from './lib/db'
-import { dateKey, todayKey, calcStreak, calcBest, getWeekDates } from './lib/utils'
+import { dateKey, todayKey, calcStreak } from './lib/utils'
 import { buildAll, HABIT_LIST } from './data/activities'
 import { MOODS } from './config'
 import { Header } from './components/Header'
@@ -46,39 +46,35 @@ export default function App() {
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load data
+  // Load data: localStorage first (instant), then Supabase (background sync)
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function applyBlob(b: any) {
+      if (b.checks) setChecks(b.checks as typeof checks)
+      if (b.history) setHistory(b.history as typeof history)
+      if (b.notes) setNotes(b.notes as typeof notes)
+      if (b.moods) setMoods(b.moods as typeof moods)
+      if (b.acts) setAllActs(buildAll(b.acts as Record<string, Activity[]>))
+      if (b.journal) setJournal(b.journal as typeof journal)
+    }
+
+    // Step 1: load from localStorage instantly
+    const backup = localStorage.getItem('dc_backup')
+    if (backup) {
+      try {
+        applyBlob(JSON.parse(backup))
+      } catch (e) {
+        console.error('backup parse error', e)
+      }
+    }
+    setLoading(false)
+
+    // Step 2: sync from Supabase in background (overwrites if newer)
     dbLoad()
       .then((blob) => {
-        if (blob) {
-          if (blob.checks) setChecks(blob.checks)
-          if (blob.history) setHistory(blob.history)
-          if (blob.notes) setNotes(blob.notes)
-          if (blob.moods) setMoods(blob.moods)
-          if (blob.acts) setAllActs(buildAll(blob.acts))
-          if (blob.journal) setJournal(blob.journal)
-        } else {
-          const backup = localStorage.getItem('dc_backup')
-          if (backup) {
-            try {
-              const b = JSON.parse(backup)
-              if (b.checks) setChecks(b.checks)
-              if (b.history) setHistory(b.history)
-              if (b.notes) setNotes(b.notes)
-              if (b.moods) setMoods(b.moods)
-              if (b.acts) setAllActs(buildAll(b.acts))
-              if (b.journal) setJournal(b.journal)
-            } catch (e) {
-              console.error('backup parse error', e)
-            }
-          }
-        }
-        setLoading(false)
+        if (blob) applyBlob(blob)
       })
-      .catch((e) => {
-        console.error('dbLoad error', e)
-        setLoading(false)
-      })
+      .catch((e) => console.error('dbLoad error', e))
   }, [])
 
   const persist = useCallback(
@@ -107,7 +103,6 @@ export default function App() {
   const streak = calcStreak(allActs, checks)
   const todayMood = moods[ck]
   const isToday = ck === todayKey()
-  const weekDates = getWeekDates(curDate)
 
   // Actions
   function toggle(id: number) {
@@ -237,7 +232,6 @@ export default function App() {
         setTab={setTab}
         curDate={curDate}
         setCurDate={setCurDate}
-        weekDates={weekDates}
         ck={ck}
         history={history}
         streak={streak}
