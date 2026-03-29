@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from 'react'
 import type { Activity, JournalEntry, HistoryEntry } from '../types'
 import { fmtLong, nowHHMM, todayKey, dateKey, addDays } from '../lib/utils'
+import { detectTaskTag } from '../lib/taskType'
 
 interface Props {
   curDate: Date
@@ -167,16 +168,21 @@ export function HabitsTab({
       </div>
 
       {/* Next activity highlight */}
-      {isToday && nextAct && (
-        <div className="bg-white text-black rounded-2xl p-3.5 mb-4 flex items-center gap-3">
-          <div className="text-lg">▶</div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-widest opacity-50">Prossima</div>
-            <div className="text-[14px] font-semibold truncate">{nextAct.title}</div>
+      {isToday && nextAct && (() => {
+        const nextTag = detectTaskTag(nextAct.title, nextAct.fromCal)
+        return (
+          <div className="bg-white text-black rounded-2xl p-3.5 mb-4 flex items-center gap-3">
+            <div className="text-lg">{nextTag?.icon || '▶'}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-widest opacity-50">
+                {nextTag ? nextTag.label : 'Prossima'}
+              </div>
+              <div className="text-[14px] font-semibold truncate">{nextAct.title}</div>
+            </div>
+            <div className="text-[13px] font-bold">{nextAct.time}</div>
           </div>
-          <div className="text-[13px] font-bold">{nextAct.time}</div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Empty state */}
       {dayActs.length === 0 && (
@@ -204,6 +210,7 @@ export function HabitsTab({
               const isDragging = dragIdx === idx
               const isDropTarget = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx
               const isSwiping = swipeId === act.id
+              const tag = detectTaskTag(act.title, act.fromCal)
 
               return (
                 <div
@@ -211,6 +218,7 @@ export function HabitsTab({
                   className="rounded-[13px] mb-[7px] relative overflow-hidden"
                   style={{
                     border: `1px solid ${isDropTarget ? '#fff' : isNext ? '#fff' : isDone ? '#1e1e1e' : isPast ? '#1a1010' : '#141414'}`,
+                    borderLeft: tag ? `3px solid ${tag.accent}` : undefined,
                     background: isDragging ? '#151515' : isDone ? '#060606' : isNext ? '#0f0f0f' : isPast ? '#0a0808' : '#0a0a0a',
                     opacity: isDragging ? 0.6 : isPast ? 0.5 : 1,
                     transform: isDropTarget ? 'scale(1.02)' : 'scale(1)',
@@ -275,14 +283,15 @@ export function HabitsTab({
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(act)}>
-                      <div className={`text-[13px] font-medium mb-0.5 ${isDone ? 'text-[#252525] line-through' : isPast ? 'text-[#555]' : 'text-[#e0e0e0]'}`}>
-                        {act.title}
+                      <div className={`text-[13px] font-medium mb-0.5 flex items-center gap-1.5 ${isDone ? 'text-[#252525] line-through' : isPast ? 'text-[#555]' : 'text-[#e0e0e0]'}`}>
+                        {tag && <span className="text-[12px] shrink-0">{tag.icon}</span>}
+                        <span className="truncate">{act.title}</span>
                       </div>
                       <div className="flex gap-1.5 flex-wrap items-center">
                         <span className="text-[10px] text-muted-3">⏱{act.time}</span>
                         <span className="text-[10px] text-muted-5">·</span>
                         <span className="text-[10px] text-muted-3">{act.duration}min</span>
-                        <span className="text-[9px] text-muted-4 border border-border px-[5px] py-px rounded-[5px]">{act.category}</span>
+                        {tag && <span className="text-[8px] text-muted-3 border border-border px-[5px] py-px rounded-[5px]">{tag.label}</span>}
                         {act.streak && <span className="text-[9px] text-muted-3">🔥</span>}
                         {act.fromCal && <span className="text-[9px] text-white bg-[#1a1a1a] border border-[#333] px-1.5 py-px rounded-[5px]">da Calendar</span>}
                         {hasNote && <span className="text-[10px] text-muted-1">✎</span>}
