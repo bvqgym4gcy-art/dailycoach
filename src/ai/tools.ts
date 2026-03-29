@@ -1,4 +1,4 @@
-import type { Activity } from '../types'
+import type { Activity, DayMealPlan } from '../types'
 
 export const AI_TOOLS = [
   {
@@ -68,6 +68,24 @@ export const AI_TOOLS = [
       required: ['text'],
     },
   },
+  {
+    name: 'set_meal_plan',
+    description:
+      "Imposta il piano alimentare per uno o più giorni. Usa questo quando Stefano ti dà un piano alimentare (PDF, testo, ecc.) e ti chiede di applicarlo a un periodo. Chiama questo tool una volta per ogni giorno. I campi sono opzionali: imposta solo quelli presenti nel piano.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        date: { type: 'string', description: 'La data in formato YYYY-MM-DD' },
+        colazione: { type: 'string', description: 'Cosa mangiare a colazione (o nota digiuno)' },
+        spuntino1: { type: 'string', description: 'Spuntino di metà mattina' },
+        pranzo: { type: 'string', description: 'Cosa mangiare a pranzo con quantità' },
+        spuntino2: { type: 'string', description: 'Spuntino pomeridiano' },
+        merenda: { type: 'string', description: 'Merenda con quantità' },
+        cena: { type: 'string', description: 'Cosa mangiare a cena con quantità' },
+      },
+      required: ['date'],
+    },
+  },
 ]
 
 export interface ToolCall {
@@ -82,6 +100,7 @@ export interface ToolHandlers {
   onAddActivity: (act: Omit<Activity, 'id'>) => string
   onSaveNote: (activityId: number, text: string) => string
   onSaveJournal: (text: string) => string
+  onSetMealPlan: (date: string, plan: DayMealPlan) => string
 }
 
 export function handleToolCall(
@@ -109,6 +128,16 @@ export function handleToolCall(
       )
     case 'save_journal':
       return handlers.onSaveJournal(tool.input.text as string)
+    case 'set_meal_plan': {
+      const plan: DayMealPlan = {}
+      if (tool.input.colazione) plan.colazione = tool.input.colazione as string
+      if (tool.input.spuntino1) plan.spuntino1 = tool.input.spuntino1 as string
+      if (tool.input.pranzo) plan.pranzo = tool.input.pranzo as string
+      if (tool.input.spuntino2) plan.spuntino2 = tool.input.spuntino2 as string
+      if (tool.input.merenda) plan.merenda = tool.input.merenda as string
+      if (tool.input.cena) plan.cena = tool.input.cena as string
+      return handlers.onSetMealPlan(tool.input.date as string, plan)
+    }
     default:
       return `Tool sconosciuto: ${tool.name}`
   }

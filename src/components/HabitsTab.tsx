@@ -19,11 +19,12 @@ interface Props {
   onAdd: () => void
   onJournal: () => void
   onReorder: (fromIdx: number, toIdx: number) => void
+  onGoToCalendar: () => void
 }
 
 export function HabitsTab({
   curDate, setCurDate, dayActs, dayChecks, done, total, rate, isToday, ck, notes, journal,
-  onToggle, onEdit, onAdd, onJournal, onReorder,
+  onToggle, onEdit, onAdd, onJournal, onReorder, onGoToCalendar,
 }: Props) {
   const nowIdx = isToday
     ? (() => {
@@ -177,10 +178,10 @@ export function HabitsTab({
                   {isDone ? '✓' : ''}
                 </button>
 
-                {/* Task content — tap to edit */}
+                {/* Task content — tap to edit (or go to calendar if fromCal) */}
                 <div
                   className="flex-1 min-w-0 cursor-pointer"
-                  onClick={() => onEdit(act)}
+                  onClick={() => act.fromCal ? onGoToCalendar() : onEdit(act)}
                 >
                   <div
                     className={`text-[13px] font-medium mb-0.5 ${isDone ? 'text-[#252525] line-through' : 'text-[#e0e0e0]'}`}
@@ -196,8 +197,8 @@ export function HabitsTab({
                     </span>
                     {act.streak && <span className="text-[9px] text-muted-3">🔥</span>}
                     {act.fromCal && (
-                      <span className="text-[9px] text-muted-4 border border-border px-1 py-px rounded-[5px]">
-                        cal
+                      <span className="text-[9px] text-white bg-[#1a1a1a] border border-[#333] px-1.5 py-px rounded-[5px]">
+                        da Calendar →
                       </span>
                     )}
                     {hasNote && <span className="text-[10px] text-muted-1">✎</span>}

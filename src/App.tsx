@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
-import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData } from './types'
+import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan } from './types'
 import { dbLoad, dbSave } from './lib/db'
 import { dateKey, todayKey, calcStreak, addDays } from './lib/utils'
 import { buildAll, HABIT_LIST } from './data/activities'
@@ -26,6 +26,7 @@ export default function App() {
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [moods, setMoods] = useState<Record<string, number>>({})
   const [journal, setJournal] = useState<Record<string, JournalEntry>>({})
+  const [mealPlans, setMealPlans] = useState<Record<string, DayMealPlan>>({})
   const [saveStatus, setSaveStatus] = useState('')
 
   // Modal state
@@ -50,7 +51,10 @@ export default function App() {
       if (b.history) setHistory(b.history as typeof history)
       if (b.notes) setNotes(b.notes as typeof notes)
       if (b.moods) setMoods(b.moods as typeof moods)
-      if (b.acts) setAllActs(buildAll(b.acts as Record<string, Activity[]>))
+      if (b.mealPlans) setMealPlans(b.mealPlans as typeof mealPlans)
+      const mp = (b.mealPlans || {}) as Record<string, DayMealPlan>
+      if (b.acts) setAllActs(buildAll(b.acts as Record<string, Activity[]>, mp))
+      else setAllActs(buildAll({}, mp))
       if (b.journal) setJournal(b.journal as typeof journal)
     }
 
@@ -74,11 +78,11 @@ export default function App() {
   }, [])
 
   const persist = useCallback(
-    (c: typeof checks, h: typeof history, n: typeof notes, m: typeof moods, a: typeof allActs, j: typeof journal) => {
+    (c: typeof checks, h: typeof history, n: typeof notes, m: typeof moods, a: typeof allActs, j: typeof journal, mp?: typeof mealPlans) => {
       setSaveStatus('saving')
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
-        const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j }
+        const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans }
         localStorage.setItem('dc_backup', JSON.stringify(blob))
         dbSave(blob).then(() => {
           setSaveStatus('✓')
@@ -250,6 +254,19 @@ export default function App() {
     return 'Journal salvato.'
   }
 
+  function aiSetMealPlan(date: string, plan: DayMealPlan): string {
+    const newPlans = { ...mealPlans, [date]: { ...(mealPlans[date] || {}), ...plan } }
+    setMealPlans(newPlans)
+    // Rebuild activities for this day with new meal plan
+    const newActs = { ...allActs }
+    delete newActs[date] // force rebuild
+    const rebuilt = buildAll(newActs, newPlans)
+    setAllActs(rebuilt)
+    persist(checks, history, notes, moods, rebuilt, journal, newPlans)
+    const parts = [plan.colazione, plan.pranzo, plan.merenda, plan.cena].filter(Boolean)
+    return `Piano pasto per ${date} impostato: ${parts.join(', ')}`
+  }
+
   // Swipe to change day
   const swipeStartX = useRef(0)
   const swipeStartY = useRef(0)
@@ -322,6 +339,7 @@ export default function App() {
             onAdd={() => { setShowAdd(true); setEditItem(null); setNewAct({ ...emptyAct, date: ck }) }}
             onJournal={() => { setJournalDraft(journal[ck]?.text || ''); setShowJournal(true) }}
             onReorder={reorderActs}
+            onGoToCalendar={() => setTab('calendar')}
           />
         )}
 
@@ -370,6 +388,7 @@ export default function App() {
               onAddActivity: aiAddActivity,
               onSaveNote: aiSaveNote,
               onSaveJournal: aiSaveJournal,
+              onSetMealPlan: aiSetMealPlan,
             }}
           />
         )}

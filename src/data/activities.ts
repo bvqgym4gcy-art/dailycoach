@@ -1,4 +1,4 @@
-import type { Activity } from '../types'
+import type { Activity, DayMealPlan } from '../types'
 import { dateKey } from '../lib/utils'
 import { WEEKLY_PLAN } from './diet'
 
@@ -58,53 +58,7 @@ const SPORT: Omit<Activity, 'id'>[] = [
   { time: '09:00', title: 'Palestra', category: 'sport', duration: 60, streak: true },
 ]
 
-// ─── PASTI PRE-DIETA (prima del 1 aprile) ───────────────────
-const MEALS_GENERIC: Omit<Activity, 'id'>[] = [
-  { time: '08:00', title: '☕ Colazione', category: 'routine', duration: 20, streak: false },
-  { time: '11:00', title: '🍎 Spuntino mattina', category: 'routine', duration: 10, streak: false },
-  { time: '13:30', title: '🥗 Pranzo', category: 'routine', duration: 30, streak: false },
-  { time: '16:30', title: '🍎 Spuntino pomeriggio', category: 'routine', duration: 10, streak: false },
-  { time: '20:00', title: '🍽 Cena', category: 'routine', duration: 40, streak: false },
-]
-
-// ─── PASTI DIETA IF 16:8 (dal 1 aprile) ─────────────────────
-// Genera pasti con il dettaglio specifico del giorno dal piano settimanale
 const DIET_START = '2026-04-01'
-
-function buildDietMeals(dayOfWeek: number): Omit<Activity, 'id'>[] {
-  const plan = WEEKLY_PLAN[dayOfWeek]
-
-  return [
-    {
-      time: '08:00',
-      title: '🔒 Digiuno — solo acqua, tè, caffè',
-      category: 'routine',
-      duration: 5,
-      streak: true,
-    },
-    {
-      time: '14:00',
-      title: `🥗 Pranzo — ${plan.pranzo.carb}, ${plan.pranzo.protein}`,
-      category: 'routine',
-      duration: 40,
-      streak: true,
-    },
-    {
-      time: '17:00',
-      title: `🥣 Merenda — ${plan.merenda}`,
-      category: 'routine',
-      duration: 10,
-      streak: true,
-    },
-    {
-      time: '20:00',
-      title: `🍽 Cena — ${plan.cena.protein}, ${plan.cena.verdura}`,
-      category: 'routine',
-      duration: 40,
-      streak: true,
-    },
-  ]
-}
 
 const TODAY_EXTRA: Omit<Activity, 'id'>[] = [
   { time: '15:00', title: 'Piano pillole settimanale', category: 'lavoro', duration: 60, streak: false },
@@ -113,10 +67,55 @@ const TODAY_EXTRA: Omit<Activity, 'id'>[] = [
   { time: '18:00', title: 'Newsletter — 1h focus', category: 'lavoro', duration: 60, streak: true },
 ]
 
-// All streak habits for stats tracking
 export const HABIT_LIST = [...new Set(PILLS.filter((a) => a.streak).map((a) => a.title))]
 
-export function buildAll(saved: Record<string, Activity[]> = {}): Record<string, Activity[]> {
+// ─── PASTI: legge dal DB (mealPlans), fallback su WEEKLY_PLAN ──
+
+function buildMeals(k: string, mealPlan?: DayMealPlan): Omit<Activity, 'id'>[] {
+  const isDiet = k >= DIET_START
+  const dayOfWeek = (new Date(k).getDay() + 6) % 7 // 0=Mon
+
+  if (!isDiet) {
+    // Pre-diet: generic meals
+    return [
+      { time: '08:00', title: '☕ Colazione', category: 'routine', duration: 20, streak: false },
+      { time: '11:00', title: '🍎 Spuntino mattina', category: 'routine', duration: 10, streak: false },
+      { time: '13:30', title: '🥗 Pranzo', category: 'routine', duration: 30, streak: false },
+      { time: '16:30', title: '🍎 Spuntino pomeriggio', category: 'routine', duration: 10, streak: false },
+      { time: '20:00', title: '🍽 Cena', category: 'routine', duration: 40, streak: false },
+    ]
+  }
+
+  // Diet mode: use mealPlan from DB if available, else fallback to WEEKLY_PLAN
+  const fallback = WEEKLY_PLAN[dayOfWeek]
+
+  const colazione = mealPlan?.colazione || '🔒 Digiuno — solo acqua, tè, caffè'
+  const pranzo = mealPlan?.pranzo || `${fallback.pranzo.carb}, ${fallback.pranzo.protein}`
+  const merenda = mealPlan?.merenda || fallback.merenda
+  const cena = mealPlan?.cena || `${fallback.cena.protein}, ${fallback.cena.verdura}`
+
+  const meals: Omit<Activity, 'id'>[] = [
+    { time: '08:00', title: colazione.startsWith('🔒') ? colazione : `☕ Colazione — ${colazione}`, category: 'routine', duration: 10, streak: true },
+    { time: '14:00', title: `🥗 Pranzo — ${pranzo}`, category: 'routine', duration: 40, streak: true },
+    { time: '17:00', title: `🥣 Merenda — ${merenda}`, category: 'routine', duration: 10, streak: true },
+    { time: '20:00', title: `🍽 Cena — ${cena}`, category: 'routine', duration: 40, streak: true },
+  ]
+
+  // Add spuntino if provided
+  if (mealPlan?.spuntino1) {
+    meals.push({ time: '11:00', title: `🍎 Spuntino — ${mealPlan.spuntino1}`, category: 'routine', duration: 10, streak: false })
+  }
+  if (mealPlan?.spuntino2) {
+    meals.push({ time: '16:00', title: `🍎 Spuntino — ${mealPlan.spuntino2}`, category: 'routine', duration: 10, streak: false })
+  }
+
+  return meals
+}
+
+export function buildAll(
+  saved: Record<string, Activity[]> = {},
+  mealPlans: Record<string, DayMealPlan> = {}
+): Record<string, Activity[]> {
   const res = { ...saved }
   const s = new Date('2026-03-28')
   const e = new Date('2026-04-30')
@@ -124,7 +123,6 @@ export function buildAll(saved: Record<string, Activity[]> = {}): Record<string,
     const k = dateKey(new Date(d))
     if (res[k]) continue
 
-    // Google Calendar events
     const gcal: Activity[] = GCAL.filter((ev) => ev.date === k).map((ev, i) => ({
       ...ev,
       id: parseInt(k.replace(/-/g, '')) * 100 + 80 + i,
@@ -132,10 +130,7 @@ export function buildAll(saved: Record<string, Activity[]> = {}): Record<string,
       streak: false,
     }))
 
-    // Build daily template: pills + sport + meals (diet or generic)
-    const isDiet = k >= DIET_START
-    const dayOfWeek = (new Date(k).getDay() + 6) % 7 // 0=Mon
-    const meals = isDiet ? buildDietMeals(dayOfWeek) : MEALS_GENERIC
+    const meals = buildMeals(k, mealPlans[k])
 
     const template: Omit<Activity, 'id'>[] = [
       ...PILLS,

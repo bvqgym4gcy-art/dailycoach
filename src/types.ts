@@ -37,6 +37,15 @@ export interface AIInsight {
 export type Tab = 'today' | 'calendar' | 'stats' | 'diet' | 'chat' | 'ai'
 export type Category = Activity['category']
 
+export interface DayMealPlan {
+  colazione?: string
+  spuntino1?: string
+  pranzo?: string
+  spuntino2?: string
+  merenda?: string
+  cena?: string
+}
+
 export interface AppData {
   checks: Record<string, Record<number, boolean>>
   history: Record<string, HistoryEntry>
@@ -44,4 +53,5 @@ export interface AppData {
   moods: Record<string, number>
   acts: Record<string, Activity[]>
   journal: Record<string, JournalEntry>
+  mealPlans?: Record<string, DayMealPlan>
 }
