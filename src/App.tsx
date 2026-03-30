@@ -88,17 +88,25 @@ export default function App() {
       .catch((e) => console.error('dbLoad error', e))
   }, [])
 
+  // Persist uses a pending blob ref — always saves the LATEST state, never stale
+  const pendingBlob = useRef<AppData | null>(null)
+
   const persist = useCallback(
     (c: typeof checks, h: typeof history, n: typeof notes, m: typeof moods, a: typeof allActs, j: typeof journal, mp?: typeof mealPlans, r?: typeof rules, ci?: typeof dailyCheckIn) => {
+      const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans, rules: r || rules, dailyCheckIn: ci || dailyCheckIn }
+      // Always save to localStorage immediately (fast, no data loss)
+      localStorage.setItem('dc_backup', JSON.stringify(blob))
+      // Debounce Supabase save to avoid hammering the API
+      pendingBlob.current = blob
       setSaveStatus('saving')
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
-        const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans, rules: r || rules, dailyCheckIn: ci || dailyCheckIn }
-        localStorage.setItem('dc_backup', JSON.stringify(blob))
-        dbSave(blob).then(() => {
+        if (!pendingBlob.current) return
+        dbSave(pendingBlob.current).then(() => {
           setSaveStatus('✓')
           setTimeout(() => setSaveStatus(''), 2000)
         })
+        pendingBlob.current = null
       }, 800)
     },
     []

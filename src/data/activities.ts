@@ -9,49 +9,8 @@ const SPORT_LABELS: Record<SportType, { icon: string; label: string; duration: n
   yoga: { icon: '🧘', label: 'Yoga', duration: 60 },
 }
 
-// ─── GOOGLE CALENDAR EVENTS (synced from stefanodc@adtucon.io) ──
-// Last sync: 2026-03-30T14:00:00 via MCP
-// These are also stored in AppData.calendarEvents for live merge
-// The app merges both sources: hardcoded + DB calendarEvents
-
-interface GCalEvent {
-  date: string
-  time: string
-  title: string
-  category: Activity['category']
-  duration: number
-}
-
-export const GCAL: GCalEvent[] = [
-  // March 2026
-  { date: '2026-03-28', time: '01:30', title: '✈ Going to Warsaw', category: 'sociale', duration: 60 },
-  { date: '2026-03-30', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-03-30', time: '15:00', title: '💰 Soldi', category: 'lavoro', duration: 60 },
-  { date: '2026-03-31', time: '11:00', title: '⬡ Partnership adrow', category: 'lavoro', duration: 60 },
-  { date: '2026-03-31', time: '17:00', title: '⬡ Slash partership', category: 'lavoro', duration: 60 },
-  { date: '2026-03-31', time: '20:00', title: '◎ Cena', category: 'sociale', duration: 90 },
-  // April 2026
-  { date: '2026-04-01', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-  { date: '2026-04-06', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-04-07', time: '09:00', title: '⊕ Fisio Cassino 9', category: 'salute', duration: 60 },
-  { date: '2026-04-08', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-  { date: '2026-04-11', time: '10:00', title: '◎ Compleanno di Andrea — Roma', category: 'sociale', duration: 120 },
-  { date: '2026-04-13', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-04-15', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-  { date: '2026-04-20', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-04-22', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-  { date: '2026-04-27', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-04-29', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-  // May 2026
-  { date: '2026-05-04', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-05-06', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-  { date: '2026-05-11', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-05-13', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-  { date: '2026-05-18', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-05-20', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-  { date: '2026-05-25', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
-  { date: '2026-05-27', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
-]
+// Calendar events come ONLY from live Google Calendar sync (calendarSync.ts)
+// No hardcoded events — single source of truth
 
 // ─── PILLOLE ────────────────────────────────────────────────
 const PILLS_BASE: Omit<Activity, 'id'>[] = [
@@ -134,19 +93,11 @@ export function buildAll(
   for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
     const k = dateKey(new Date(d))
 
-    const gcalEvents: Activity[] = GCAL.filter((ev) => ev.date === k).map((ev, i) => ({
-      ...ev,
-      id: parseInt(k.replace(/-/g, '')) * 100 + 80 + i,
-      fromCal: true,
-      streak: false,
-    }))
-
     if (res[k]) {
-      // Day exists — clean up and sync
+      // Day exists in saved data — clean up legacy issues
       let dayActs = res[k]
 
-      // Remove legacy hardcoded sport (old "Palestra" at fixed time)
-      // Sport is now dynamic from daily check-in
+      // Remove legacy sport if no check-in for this day
       if (!dailyCheckIn[k]) {
         dayActs = dayActs.filter((a) => a.category !== 'sport')
       }
@@ -159,20 +110,11 @@ export function buildAll(
         })
       }
 
-      // Add missing calendar events (avoid duplicates)
-      const existingTitles = new Set(dayActs.filter((a) => a.fromCal).map((a) =>
-        a.title.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase()
-      ))
-      const newCalEvents = gcalEvents.filter((ev) => {
-        const clean = ev.title.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase()
-        return !existingTitles.has(clean)
-      })
-      if (newCalEvents.length > 0) dayActs = [...dayActs, ...newCalEvents]
-
       res[k] = dayActs
       continue
     }
 
+    // New day — build from template (no calendar events here, those come from live sync)
     const meals = buildMeals(k, mealPlans[k])
     const isDiet = k >= DIET_START
     const pills = isDiet ? PILLS_FASE3 : PILLS_BASE
@@ -183,7 +125,7 @@ export function buildAll(
       id: parseInt(k.replace(/-/g, '')) * 100 + i,
     }))
 
-    res[k] = [...base, ...gcalEvents]
+    res[k] = base
   }
   return res
 }
