@@ -136,17 +136,22 @@ export function HabitsTab({
     if (swipeId === null) return
     const dx = e.touches[0].clientX - swipeStartX.current
     const dy = e.touches[0].clientY - swipeStartY2.current
-    if (!swipeLocked.current && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+    if (!swipeLocked.current && (Math.abs(dx) > 15 || Math.abs(dy) > 15)) {
       if (Math.abs(dy) > Math.abs(dx)) { setSwipeId(null); setSwipeX(0); return }
       swipeLocked.current = true
     }
     if (swipeLocked.current) {
       e.stopPropagation()
+      e.preventDefault() // prevent click from firing after swipe
       if (dx > 0) setSwipeX(Math.min(dx, 100))
     }
   }
   function onSwipeEnd(e: React.TouchEvent) {
-    if (swipeId !== null && swipeX > 60) { e.stopPropagation(); onToggle(swipeId) }
+    if (swipeId !== null && swipeX > 60) {
+      e.stopPropagation()
+      onToggle(swipeId)
+    }
+    // If no significant swipe happened, let the click through naturally
     setSwipeId(null)
     setSwipeX(0)
     swipeLocked.current = false
@@ -295,7 +300,8 @@ export function HabitsTab({
                 return (
                   <div
                     key={act.id}
-                    className="rounded-[13px] mb-[7px] overflow-hidden"
+                    className="rounded-[13px] mb-[7px] overflow-hidden cursor-pointer"
+                    onClick={() => onEdit(act)}
                     style={{
                       border: `1px solid ${isDropTarget ? '#fff' : isCurrent ? '#fff' : isDone ? '#1e1e1e' : isPast ? '#1a1010' : '#141414'}`,
                       borderLeft: tag ? `3px solid ${tag.accent}` : undefined,
@@ -330,7 +336,7 @@ export function HabitsTab({
                       )}
 
                       <button
-                        onClick={(e) => { e.stopPropagation(); onToggle(act.id) }}
+                        onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(act.id) }}
                         className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] text-black"
                         style={{
                           border: `1.5px solid ${isDone ? '#fff' : isCurrent ? '#555' : '#1f1f1f'}`,
@@ -342,7 +348,7 @@ export function HabitsTab({
                         {isDone ? '✓' : ''}
                       </button>
 
-                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(act)}>
+                      <div className="flex-1 min-w-0">
                         <div className={`text-[13px] font-medium mb-1 flex items-start gap-1.5 ${isDone ? 'text-[#303030] line-through' : isPast ? 'text-[#666]' : 'text-[#e0e0e0]'}`}>
                           {tag && <span className="text-[12px] shrink-0 leading-[18px]">{tag.icon}</span>}
                           <span className="break-words">{act.title}</span>
