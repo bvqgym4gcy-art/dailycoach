@@ -115,19 +115,19 @@ export default function App() {
   const todayMood = moods[ck]
   const isToday = ck === todayKey()
 
-  // Show daily check-in once per day, only if not yet answered
-  // sessionStorage prevents re-showing on same-session reloads
+  // Show daily check-in ONCE per day — localStorage persists across reloads/reopens
   useEffect(() => {
+    if (loading) return
     const tk = todayKey()
-    const dismissed = sessionStorage.getItem(`checkin-${tk}`)
-    if (!dailyCheckIn[tk] && !loading && !dismissed) {
+    const answered = dailyCheckIn[tk] || localStorage.getItem(`checkin-${tk}`)
+    if (!answered) {
       setShowCheckIn(true)
     }
-  }, [loading, dailyCheckIn])
+  }, [loading])
 
   function handleCheckIn(data: DailyCheckInData) {
     const tk = todayKey()
-    sessionStorage.setItem(`checkin-${tk}`, '1')
+    localStorage.setItem(`checkin-${tk}`, '1')
     const newCI = { ...dailyCheckIn, [tk]: data }
     setDailyCheckIn(newCI)
     setShowCheckIn(false)
