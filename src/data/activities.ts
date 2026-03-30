@@ -27,6 +27,8 @@ export const GCAL: GCalEvent[] = [
   { date: '2026-03-28', time: '01:30', title: '✈ Going to Warsaw', category: 'sociale', duration: 60 },
   { date: '2026-03-30', time: '11:30', title: '⬡ Weekly Update Adtucon-Visio', category: 'lavoro', duration: 45 },
   { date: '2026-03-30', time: '15:00', title: '💰 Soldi', category: 'lavoro', duration: 60 },
+  { date: '2026-03-31', time: '11:00', title: '⬡ Partnership adrow', category: 'lavoro', duration: 60 },
+  { date: '2026-03-31', time: '17:00', title: '⬡ Slash partership', category: 'lavoro', duration: 60 },
   { date: '2026-03-31', time: '20:00', title: '◎ Cena', category: 'sociale', duration: 90 },
   // April 2026
   { date: '2026-04-01', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan weekly', category: 'lavoro', duration: 50 },
