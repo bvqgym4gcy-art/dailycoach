@@ -15,10 +15,21 @@ function detectCategory(title: string): Activity['category'] {
   return 'lavoro'
 }
 
-/**
- * Fetch live calendar events from the Vercel serverless proxy.
- * The proxy reads the private iCal feed from Google Calendar.
- */
+function cleanTitle(t: string): string {
+  return t.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase()
+}
+
+function titlesMatch(a: string, b: string): boolean {
+  const ca = cleanTitle(a)
+  const cb = cleanTitle(b)
+  if (ca === cb) return true
+  // Partial match — one contains the start of the other
+  if (ca.length > 5 && cb.length > 5) {
+    return ca.includes(cb.substring(0, 12)) || cb.includes(ca.substring(0, 12))
+  }
+  return false
+}
+
 export async function fetchLiveCalendar(): Promise<CalEvent[] | null> {
   try {
     const r = await fetch('/api/calendar')
@@ -32,7 +43,9 @@ export async function fetchLiveCalendar(): Promise<CalEvent[] | null> {
 
 /**
  * Merge live calendar events into allActs.
- * Adds new events, removes events that no longer exist on Google Calendar.
+ * - Adds new events
+ * - Removes events no longer on Google Calendar
+ * - Deduplicates by title + date (ignores minor time differences)
  */
 export function mergeCalendarEvents(
   liveEvents: CalEvent[],
@@ -41,46 +54,30 @@ export function mergeCalendarEvents(
   let changed = false
   const result = { ...allActs }
 
-  // Build a set of live event keys for quick lookup
-  const liveKeys = new Set(liveEvents.map((ev) => `${ev.date}|${ev.time}|${ev.title.toLowerCase()}`))
-
   // Group live events by date
   const byDate: Record<string, CalEvent[]> = {}
   for (const ev of liveEvents) {
     if (!byDate[ev.date]) byDate[ev.date] = []
-    byDate[ev.date].push(ev)
+    // Deduplicate within live events themselves (same title + same date)
+    const dup = byDate[ev.date].some((e) => titlesMatch(e.title, ev.title))
+    if (!dup) byDate[ev.date].push(ev)
   }
 
-  // For each day that has activities, sync calendar events
+  // Sync each day
   for (const date of Object.keys(result)) {
     const dayActs = result[date]
     const liveForDay = byDate[date] || []
 
-    // Remove calendar events that are no longer on Google Calendar
+    // Remove fromCal events that are no longer live
     const filtered = dayActs.filter((a) => {
-      if (!a.fromCal) return true // keep non-calendar activities
-      const key = `${date}|${a.time}|${a.title.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase()}`
-      // Keep if there's a live event that matches closely
-      return liveEvents.some((ev) => {
-        const evKey = `${ev.date}|${ev.time}|${ev.title.toLowerCase()}`
-        return ev.date === date && (
-          ev.title.toLowerCase() === a.title.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase() ||
-          a.title.toLowerCase().includes(ev.title.toLowerCase().substring(0, 15)) ||
-          ev.title.toLowerCase().includes(a.title.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase().substring(0, 15))
-        )
-      })
+      if (!a.fromCal) return true
+      return liveForDay.some((ev) => titlesMatch(ev.title, a.title))
     })
-
     if (filtered.length !== dayActs.length) changed = true
 
-    // Add new live events that don't exist yet
+    // Add new live events not already present (check against ALL activities, not just fromCal)
     for (const ev of liveForDay) {
-      const exists = filtered.some((a) =>
-        a.fromCal && (
-          a.title.toLowerCase().includes(ev.title.toLowerCase().substring(0, 15)) ||
-          ev.title.toLowerCase().includes(a.title.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase().substring(0, 15))
-        )
-      )
+      const exists = filtered.some((a) => titlesMatch(a.title, ev.title))
       if (!exists) {
         filtered.push({
           id: Math.abs(hashCode(`${ev.date}-${ev.time}-${ev.title}`)) % 100000000,
@@ -98,7 +95,7 @@ export function mergeCalendarEvents(
     result[date] = filtered
   }
 
-  // Add events for days that don't exist in allActs yet
+  // Add events for days not yet in allActs
   for (const date of Object.keys(byDate)) {
     if (result[date]) continue
     result[date] = byDate[date].map((ev) => ({

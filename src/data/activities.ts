@@ -142,10 +142,34 @@ export function buildAll(
     }))
 
     if (res[k]) {
-      // Day exists — add missing calendar events
-      const existingCalTitles = new Set(res[k].filter((a) => a.fromCal).map((a) => a.title.toLowerCase()))
-      const newCalEvents = gcalEvents.filter((ev) => !existingCalTitles.has(ev.title.toLowerCase()))
-      if (newCalEvents.length > 0) res[k] = [...res[k], ...newCalEvents]
+      // Day exists — clean up and sync
+      let dayActs = res[k]
+
+      // Remove legacy hardcoded sport (old "Palestra" at fixed time)
+      // Sport is now dynamic from daily check-in
+      if (!dailyCheckIn[k]) {
+        dayActs = dayActs.filter((a) => a.category !== 'sport')
+      }
+
+      // Remove Collagene PRE/POST if no sport for this day
+      if (!dailyCheckIn[k] || dailyCheckIn[k].sport === 'skip') {
+        dayActs = dayActs.filter((a) => {
+          const lower = a.title.toLowerCase()
+          return !lower.includes('collagene pre') && !lower.includes('collagene post')
+        })
+      }
+
+      // Add missing calendar events (avoid duplicates)
+      const existingTitles = new Set(dayActs.filter((a) => a.fromCal).map((a) =>
+        a.title.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase()
+      ))
+      const newCalEvents = gcalEvents.filter((ev) => {
+        const clean = ev.title.replace(/[⬡◎⊕✈💰📹]/g, '').trim().toLowerCase()
+        return !existingTitles.has(clean)
+      })
+      if (newCalEvents.length > 0) dayActs = [...dayActs, ...newCalEvents]
+
+      res[k] = dayActs
       continue
     }
 
