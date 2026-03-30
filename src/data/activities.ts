@@ -41,9 +41,23 @@ export const GCAL: GCalEvent[] = [
   { date: '2026-04-29', time: '18:30', title: '⬡ Sal/Nello/Stefano/Brendan', category: 'lavoro', duration: 50 },
 ]
 
-// ─── PILLOLE (ogni giorno) ──────────────────────────────────
-const PILLS: Omit<Activity, 'id'>[] = [
+// ─── PILLOLE ────────────────────────────────────────────────
+// Pre-fase 3 (prima del 1 aprile)
+const PILLS_BASE: Omit<Activity, 'id'>[] = [
   { time: '07:30', title: 'Pillola — NAC 1000mg a digiuno', category: 'salute', duration: 5, streak: true },
+  { time: '08:30', title: 'Pillola — Collagene PRE-palestra', category: 'salute', duration: 5, streak: true },
+  { time: '09:00', title: 'Pillola — Immunomix x2 + Psicobrain mattina', category: 'salute', duration: 5, streak: true },
+  { time: '10:15', title: 'Pillola — Collagene POST-palestra', category: 'salute', duration: 5, streak: true },
+  { time: '13:30', title: 'Pillola — Omega3+CoQ10 + Berberol pranzo', category: 'salute', duration: 5, streak: true },
+  { time: '16:00', title: 'Pillola — Immunomix x2 + Psicobrain pomeriggio', category: 'salute', duration: 5, streak: true },
+  { time: '20:00', title: 'Pillola — Omega3+CoQ10 + Berberol + D3+K2', category: 'salute', duration: 5, streak: true },
+  { time: '22:30', title: 'Pillola — Protectin prima di dormire', category: 'salute', duration: 5, streak: true },
+]
+
+// Fase 3 — Digiuno Intermittente (dal 1 aprile): aggiunge olio di cocco 30min dopo NAC
+const PILLS_FASE3: Omit<Activity, 'id'>[] = [
+  { time: '07:30', title: 'Pillola — NAC 1000mg a digiuno', category: 'salute', duration: 5, streak: true },
+  { time: '08:00', title: '🥥 Olio di cocco — 1 cucchiaio (30min dopo NAC)', category: 'salute', duration: 5, streak: true },
   { time: '08:30', title: 'Pillola — Collagene PRE-palestra', category: 'salute', duration: 5, streak: true },
   { time: '09:00', title: 'Pillola — Immunomix x2 + Psicobrain mattina', category: 'salute', duration: 5, streak: true },
   { time: '10:15', title: 'Pillola — Collagene POST-palestra', category: 'salute', duration: 5, streak: true },
@@ -67,7 +81,7 @@ const TODAY_EXTRA: Omit<Activity, 'id'>[] = [
   { time: '18:00', title: 'Newsletter — 1h focus', category: 'lavoro', duration: 60, streak: true },
 ]
 
-export const HABIT_LIST = [...new Set(PILLS.filter((a) => a.streak).map((a) => a.title))]
+export const HABIT_LIST = [...new Set(PILLS_FASE3.filter((a) => a.streak).map((a) => a.title))]
 
 // ─── PASTI: legge dal DB (mealPlans), fallback su WEEKLY_PLAN ──
 
@@ -131,9 +145,11 @@ export function buildAll(
     }))
 
     const meals = buildMeals(k, mealPlans[k])
+    const isDiet = k >= DIET_START
+    const pills = isDiet ? PILLS_FASE3 : PILLS_BASE
 
     const template: Omit<Activity, 'id'>[] = [
-      ...PILLS,
+      ...pills,
       ...SPORT,
       ...meals,
       ...(k === '2026-03-28' ? TODAY_EXTRA : []),

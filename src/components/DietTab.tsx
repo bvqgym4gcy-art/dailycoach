@@ -23,12 +23,13 @@ interface Phase {
 const PHASES: Phase[] = [
   { id: 1, name: 'Fase 1', label: 'Cleaning', description: 'Pulizia alimentare — eliminazione tossine e reset metabolico', active: false },
   { id: 2, name: 'Fase 2', label: 'Maintaining', description: 'Mantenimento — consolidamento abitudini e equilibrio', active: false },
-  { id: 3, name: 'Fase 3', label: 'Digiuno Intermittente', description: 'IF 16:8 — Finestra alimentare 14:00–22:00', active: true },
+  { id: 3, name: 'Fase 3', label: 'Digiuno Intermittente', description: 'IF 16:8 — Finestra alimentare 14:00–22:00 · Dal 1 aprile 2026', active: true },
 ]
 
-// Pills schedule data
+// Pills schedule — Fase 3 (include olio di cocco)
 const PILLS_SCHEDULE = [
   { time: '07:30', name: 'NAC 1000mg', note: 'A digiuno, con acqua', icon: '💊' },
+  { time: '08:00', name: 'Olio di cocco — 1 cucchiaio', note: '30 minuti dopo il NAC', icon: '🥥' },
   { time: '08:30', name: 'Collagene', note: 'PRE-palestra', icon: '💊' },
   { time: '09:00', name: 'Immunomix x2 + Psicobrain', note: 'Mattina', icon: '💊' },
   { time: '10:15', name: 'Collagene', note: 'POST-palestra', icon: '💊' },
@@ -244,9 +245,10 @@ export function DietTab() {
 
           {/* Notes */}
           <div className="bg-card border border-border rounded-2xl p-4 mt-4">
-            <div className="text-xs font-semibold text-muted-1 mb-2">Note importanti</div>
+            <div className="text-xs font-semibold text-muted-1 mb-2">Note importanti — Fase 3</div>
             <div className="text-[11px] text-muted-3 leading-relaxed">
               • NAC va preso rigorosamente a digiuno<br />
+              • Olio di cocco: 1 cucchiaio 30 minuti dopo il NAC<br />
               • Collagene: una dose PRE e una POST palestra<br />
               • Omega3+CoQ10+Berberol: sempre durante i pasti<br />
               • D3+K2: solo a cena<br />

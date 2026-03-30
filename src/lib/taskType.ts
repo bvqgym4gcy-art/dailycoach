@@ -21,7 +21,7 @@ const RULES: { keywords: string[]; tag: TaskTag }[] = [
     tag: { icon: '💪', label: 'Sport', accent: '#222' },
   },
   {
-    keywords: ['pillola', 'pill'],
+    keywords: ['pillola', 'pill', 'olio di cocco'],
     tag: { icon: '💊', label: 'Pillola', accent: '#1a1a1a' },
   },
   {
