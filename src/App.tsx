@@ -115,16 +115,19 @@ export default function App() {
   const todayMood = moods[ck]
   const isToday = ck === todayKey()
 
-  // Show daily check-in if today hasn't been configured yet
+  // Show daily check-in once per day, only if not yet answered
+  // sessionStorage prevents re-showing on same-session reloads
   useEffect(() => {
     const tk = todayKey()
-    if (!dailyCheckIn[tk] && !loading) {
+    const dismissed = sessionStorage.getItem(`checkin-${tk}`)
+    if (!dailyCheckIn[tk] && !loading && !dismissed) {
       setShowCheckIn(true)
     }
   }, [loading, dailyCheckIn])
 
   function handleCheckIn(data: DailyCheckInData) {
     const tk = todayKey()
+    sessionStorage.setItem(`checkin-${tk}`, '1')
     const newCI = { ...dailyCheckIn, [tk]: data }
     setDailyCheckIn(newCI)
     setShowCheckIn(false)
