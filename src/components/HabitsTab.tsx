@@ -293,23 +293,30 @@ export function HabitsTab({
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(act)}>
-                      <div className={`text-[13px] font-medium mb-1 flex items-center gap-1.5 ${isDone ? 'text-[#303030] line-through' : isPast ? 'text-[#666]' : 'text-[#e0e0e0]'}`}>
-                        {tag && <span className="text-[12px] shrink-0">{tag.icon}</span>}
-                        <span className="truncate">{act.title}</span>
+                      {/* Title row */}
+                      <div className={`text-[13px] font-medium mb-1 flex items-start gap-1.5 ${isDone ? 'text-[#303030] line-through' : isPast ? 'text-[#666]' : 'text-[#e0e0e0]'}`}>
+                        {tag && <span className="text-[12px] shrink-0 leading-[18px]">{tag.icon}</span>}
+                        <span className="break-words">{act.title}</span>
                       </div>
+                      {/* Status badge — own line if present */}
+                      {(isNext && !isDone || isPast) && (
+                        <div className="mb-1">
+                          {isNext && !isDone && (
+                            <span className="text-[10px] text-black bg-white font-bold px-2 py-[2px] rounded-[5px] inline-block">▶ ORA</span>
+                          )}
+                          {isPast && (
+                            <span className="text-[10px] text-[#999] bg-[#1a1a1a] font-semibold px-2 py-[2px] rounded-[5px] inline-block">SALTATA</span>
+                          )}
+                        </div>
+                      )}
+                      {/* Meta row */}
                       <div className="flex gap-1.5 flex-wrap items-center">
-                        {isNext && !isDone && (
-                          <span className="text-[8px] text-black bg-white font-bold px-1.5 py-[1px] rounded-[4px]">ORA</span>
-                        )}
-                        {isPast && (
-                          <span className="text-[8px] text-[#888] bg-[#222] font-bold px-1.5 py-[1px] rounded-[4px]">SALTATA</span>
-                        )}
                         <span className="text-[10px] text-muted-3">{act.time}</span>
                         <span className="text-[10px] text-muted-5">·</span>
                         <span className="text-[10px] text-muted-3">{act.duration}min</span>
-                        {tag && <span className="text-[8px] text-muted-3 border border-border px-[5px] py-px rounded-[5px]">{tag.label}</span>}
+                        {tag && <span className="text-[9px] text-muted-3 border border-border px-[5px] py-px rounded-[5px] shrink-0">{tag.label}</span>}
                         {act.streak && <span className="text-[9px] text-muted-3">🔥</span>}
-                        {act.fromCal && <span className="text-[9px] text-white bg-[#1a1a1a] border border-[#333] px-1.5 py-px rounded-[5px]">da Calendar</span>}
+                        {act.fromCal && <span className="text-[9px] text-white bg-[#1a1a1a] border border-[#333] px-1.5 py-px rounded-[5px] shrink-0">da Calendar</span>}
                         {hasNote && <span className="text-[10px] text-muted-1">✎</span>}
                       </div>
                     </div>
