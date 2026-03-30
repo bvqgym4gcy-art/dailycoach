@@ -1,6 +1,13 @@
-import type { Activity, DayMealPlan } from '../types'
+import type { Activity, DayMealPlan, DailyCheckInData, SportType } from '../types'
 import { dateKey } from '../lib/utils'
 import { WEEKLY_PLAN } from './diet'
+
+const SPORT_LABELS: Record<SportType, { icon: string; label: string; duration: number }> = {
+  palestra: { icon: '🏋️', label: 'Palestra', duration: 60 },
+  nuoto: { icon: '🏊', label: 'Nuoto', duration: 60 },
+  corsa: { icon: '🏃', label: 'Corsa', duration: 45 },
+  yoga: { icon: '🧘', label: 'Yoga', duration: 60 },
+}
 
 // ─── GOOGLE CALENDAR EVENTS (synced from stefanodc@adtucon.io) ──
 // Last sync: 2026-03-30T14:00:00 via MCP
@@ -68,9 +75,14 @@ const PILLS_FASE3: Omit<Activity, 'id'>[] = [
   { time: '22:30', title: 'Pillola — Protectin prima di dormire', category: 'salute', duration: 5, streak: true },
 ]
 
-const SPORT: Omit<Activity, 'id'>[] = [
-  { time: '09:00', title: 'Palestra', category: 'sport', duration: 60, streak: true },
-]
+function buildSport(checkIn?: DailyCheckInData): Omit<Activity, 'id'>[] {
+  if (!checkIn || checkIn.sport === 'skip') return []
+  const s = SPORT_LABELS[checkIn.sport]
+  const time = checkIn.sportTime || '09:00'
+  return [
+    { time, title: `${s.icon} ${s.label}`, category: 'sport', duration: s.duration, streak: true },
+  ]
+}
 
 const DIET_START = '2026-04-01'
 
@@ -111,7 +123,8 @@ function buildMeals(k: string, mealPlan?: DayMealPlan): Omit<Activity, 'id'>[] {
 
 export function buildAll(
   saved: Record<string, Activity[]> = {},
-  mealPlans: Record<string, DayMealPlan> = {}
+  mealPlans: Record<string, DayMealPlan> = {},
+  dailyCheckIn: Record<string, DailyCheckInData> = {}
 ): Record<string, Activity[]> {
   const res = { ...saved }
   const s = new Date('2026-03-28')
@@ -137,8 +150,9 @@ export function buildAll(
     const meals = buildMeals(k, mealPlans[k])
     const isDiet = k >= DIET_START
     const pills = isDiet ? PILLS_FASE3 : PILLS_BASE
+    const sport = buildSport(dailyCheckIn[k])
 
-    const base: Activity[] = [...pills, ...SPORT, ...meals].map((a, i) => ({
+    const base: Activity[] = [...pills, ...sport, ...meals].map((a, i) => ({
       ...a,
       id: parseInt(k.replace(/-/g, '')) * 100 + i,
     }))

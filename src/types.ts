@@ -63,6 +63,13 @@ export interface CalendarEvent {
   category: Activity['category']
 }
 
+export type SportType = 'palestra' | 'nuoto' | 'corsa' | 'yoga'
+
+export interface DailyCheckInData {
+  sport: SportType | 'skip'  // which sport, or 'skip' for rest day
+  sportTime?: string          // HH:MM
+}
+
 export interface AppData {
   checks: Record<string, Record<number, boolean>>
   history: Record<string, HistoryEntry>
@@ -74,4 +81,5 @@ export interface AppData {
   rules?: ScheduleRule[]
   calendarEvents?: CalendarEvent[]
   calendarSyncedAt?: string
+  dailyCheckIn?: Record<string, DailyCheckInData>
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
-import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan, ScheduleRule } from './types'
+import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan, ScheduleRule, DailyCheckInData } from './types'
 import { dbLoad, dbSave } from './lib/db'
 import { dateKey, todayKey, calcStreak, addDays } from './lib/utils'
 import { buildAll, HABIT_LIST } from './data/activities'
@@ -18,6 +18,7 @@ import { applySmartSchedule, applyMoveRules, learnFromEdit, DEFAULT_RULES } from
 import { MoodModal } from './components/MoodModal'
 import { JournalModal } from './components/JournalModal'
 import { AddEditModal, type EditActState } from './components/AddEditModal'
+import { DailyCheckIn } from './components/DailyCheckIn'
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -32,6 +33,8 @@ export default function App() {
   const [journal, setJournal] = useState<Record<string, JournalEntry>>({})
   const [mealPlans, setMealPlans] = useState<Record<string, DayMealPlan>>({})
   const [rules, setRules] = useState<ScheduleRule[]>(DEFAULT_RULES)
+  const [dailyCheckIn, setDailyCheckIn] = useState<Record<string, DailyCheckInData>>({})
+  const [showCheckIn, setShowCheckIn] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
 
   // Modal state
@@ -58,9 +61,11 @@ export default function App() {
       if (b.moods) setMoods(b.moods as typeof moods)
       if (b.mealPlans) setMealPlans(b.mealPlans as typeof mealPlans)
       if (b.rules) setRules(b.rules as ScheduleRule[])
+      if (b.dailyCheckIn) setDailyCheckIn(b.dailyCheckIn as Record<string, DailyCheckInData>)
       const mp = (b.mealPlans || {}) as Record<string, DayMealPlan>
-      if (b.acts) setAllActs(buildAll(b.acts as Record<string, Activity[]>, mp))
-      else setAllActs(buildAll({}, mp))
+      const ci = (b.dailyCheckIn || {}) as Record<string, DailyCheckInData>
+      if (b.acts) setAllActs(buildAll(b.acts as Record<string, Activity[]>, mp, ci))
+      else setAllActs(buildAll({}, mp, ci))
       if (b.journal) setJournal(b.journal as typeof journal)
     }
 
@@ -84,11 +89,11 @@ export default function App() {
   }, [])
 
   const persist = useCallback(
-    (c: typeof checks, h: typeof history, n: typeof notes, m: typeof moods, a: typeof allActs, j: typeof journal, mp?: typeof mealPlans, r?: typeof rules) => {
+    (c: typeof checks, h: typeof history, n: typeof notes, m: typeof moods, a: typeof allActs, j: typeof journal, mp?: typeof mealPlans, r?: typeof rules, ci?: typeof dailyCheckIn) => {
       setSaveStatus('saving')
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
-        const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans, rules: r || rules }
+        const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans, rules: r || rules, dailyCheckIn: ci || dailyCheckIn }
         localStorage.setItem('dc_backup', JSON.stringify(blob))
         dbSave(blob).then(() => {
           setSaveStatus('✓')
@@ -109,6 +114,28 @@ export default function App() {
   const streak = calcStreak(allActs, checks)
   const todayMood = moods[ck]
   const isToday = ck === todayKey()
+
+  // Show daily check-in if today hasn't been configured yet
+  useEffect(() => {
+    const tk = todayKey()
+    if (!dailyCheckIn[tk] && !loading) {
+      setShowCheckIn(true)
+    }
+  }, [loading, dailyCheckIn])
+
+  function handleCheckIn(data: DailyCheckInData) {
+    const tk = todayKey()
+    const newCI = { ...dailyCheckIn, [tk]: data }
+    setDailyCheckIn(newCI)
+    setShowCheckIn(false)
+
+    // Rebuild today's activities with the sport choice
+    const newActs = { ...allActs }
+    delete newActs[tk] // force rebuild
+    const rebuilt = buildAll(newActs, mealPlans, newCI)
+    setAllActs(rebuilt)
+    persist(checks, history, notes, moods, rebuilt, journal, undefined, undefined, newCI)
+  }
 
   // Request notification permission on first load, schedule for today
   useEffect(() => {
@@ -480,6 +507,7 @@ export default function App() {
         +
       </button>
 
+      {showCheckIn && <DailyCheckIn onComplete={handleCheckIn} />}
       {showMood && <MoodModal todayMood={todayMood} onSave={saveMood} onClose={() => setShowMood(false)} />}
       {showJournal && <JournalModal ck={ck} draft={journalDraft} setDraft={setJournalDraft} onSave={saveJournalEntry} onClose={() => setShowJournal(false)} />}
       {showAdd && <AddEditModal editItem={editItem} newAct={newAct} setNewAct={setNewAct} onSave={saveAct} onDelete={editItem ? () => delAct(editItem.id) : null} onClose={() => { setShowAdd(false); setEditItem(null) }} />}
