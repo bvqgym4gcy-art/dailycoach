@@ -13,7 +13,7 @@ import { AICoachTab } from './components/AICoachTab'
 import { DietTab } from './components/DietTab'
 import { LifeTab } from './components/LifeTab'
 import { requestPermission, scheduleNotifications } from './lib/notifications'
-import { applySmartSchedule } from './lib/smartSchedule'
+import { applySmartSchedule, applyChainSchedule } from './lib/smartSchedule'
 import { MoodModal } from './components/MoodModal'
 import { JournalModal } from './components/JournalModal'
 import { AddEditModal, type EditActState } from './components/AddEditModal'
@@ -164,6 +164,15 @@ export default function App() {
       } else {
         na[ck] = (na[ck] || []).map((x) => (x.id === editItem.id ? { ...editItem, ...actData } : x))
       }
+
+      // Smart chain: if time changed, shift dependent activities
+      if (editItem.time !== newAct.time) {
+        const chainUpdated = applyChainSchedule(editItem, newAct.time, na[targetDate] || [])
+        if (chainUpdated) {
+          na[targetDate] = chainUpdated
+        }
+      }
+
       // Save note
       const noteKey = `${targetDate}_${editItem.id}`
       if (newAct.note.trim()) {
