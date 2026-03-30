@@ -97,22 +97,45 @@ export function HabitsTab({
   }, [dragIdx, dragOverIdx, onReorder])
 
   // Swipe to complete handlers
+  const swipeStartY2 = useRef(0)
+  const swipeLocked = useRef(false) // locks to horizontal once determined
+
   function onSwipeStart(id: number, e: React.TouchEvent) {
     swipeStartX.current = e.touches[0].clientX
+    swipeStartY2.current = e.touches[0].clientY
+    swipeLocked.current = false
     setSwipeId(id)
     setSwipeX(0)
   }
   function onSwipeMove(e: React.TouchEvent) {
     if (swipeId === null) return
     const dx = e.touches[0].clientX - swipeStartX.current
-    if (dx > 0) setSwipeX(Math.min(dx, 100))
+    const dy = e.touches[0].clientY - swipeStartY2.current
+
+    // Determine direction on first significant move
+    if (!swipeLocked.current && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      if (Math.abs(dy) > Math.abs(dx)) {
+        // Vertical — cancel swipe-to-complete, let page scroll
+        setSwipeId(null)
+        setSwipeX(0)
+        return
+      }
+      swipeLocked.current = true
+    }
+
+    if (swipeLocked.current) {
+      e.stopPropagation() // Prevent day-change swipe
+      if (dx > 0) setSwipeX(Math.min(dx, 100))
+    }
   }
-  function onSwipeEnd() {
+  function onSwipeEnd(e: React.TouchEvent) {
     if (swipeId !== null && swipeX > 60) {
+      e.stopPropagation() // Prevent day-change swipe
       onToggle(swipeId)
     }
     setSwipeId(null)
     setSwipeX(0)
+    swipeLocked.current = false
   }
 
   // Group activities
@@ -219,8 +242,8 @@ export function HabitsTab({
                   style={{
                     border: `1px solid ${isDropTarget ? '#fff' : isNext ? '#fff' : isDone ? '#1e1e1e' : isPast ? '#1a1010' : '#141414'}`,
                     borderLeft: tag ? `3px solid ${tag.accent}` : undefined,
-                    background: isDragging ? '#151515' : isDone ? '#060606' : isNext ? '#0f0f0f' : isPast ? '#0a0808' : '#0a0a0a',
-                    opacity: isDragging ? 0.6 : isPast ? 0.5 : 1,
+                    background: isDragging ? '#151515' : isDone ? '#080808' : isNext ? '#111' : isPast ? '#0a0a0a' : '#0d0d0d',
+                    opacity: isDragging ? 0.6 : isPast ? 0.7 : 1,
                     transform: isDropTarget ? 'scale(1.02)' : 'scale(1)',
                     transition: 'transform 150ms, opacity 150ms',
                   }}
@@ -283,7 +306,7 @@ export function HabitsTab({
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(act)}>
-                      <div className={`text-[13px] font-medium mb-0.5 flex items-center gap-1.5 ${isDone ? 'text-[#252525] line-through' : isPast ? 'text-[#555]' : 'text-[#e0e0e0]'}`}>
+                      <div className={`text-[13px] font-medium mb-0.5 flex items-center gap-1.5 ${isDone ? 'text-[#303030] line-through' : isPast ? 'text-[#666]' : 'text-[#e0e0e0]'}`}>
                         {tag && <span className="text-[12px] shrink-0">{tag.icon}</span>}
                         <span className="truncate">{act.title}</span>
                       </div>
