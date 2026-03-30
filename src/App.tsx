@@ -1,25 +1,28 @@
-import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense, type TouchEvent as ReactTouchEvent } from 'react'
 import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan, ScheduleRule, DailyCheckInData, ActiveProtocol } from './types'
 import { dbLoad, dbSave } from './lib/db'
 import { dateKey, todayKey, calcStreak, addDays } from './lib/utils'
 import { buildAll, HABIT_LIST } from './data/activities'
 import { MOODS } from './config'
 import { fetchLiveCalendar, mergeCalendarEvents } from './lib/calendarSync'
+import { applySmartSchedule, applyMoveRules, learnFromEdit, DEFAULT_RULES } from './lib/smartSchedule'
+
+// Critical path — loaded immediately
 import { Header } from './components/Header'
 import { HabitsTab } from './components/HabitsTab'
-import { CalendarTab } from './components/CalendarTab'
-import { StatsTab } from './components/StatsTab'
-import { ChatTab } from './components/ChatTab'
-import { AICoachTab } from './components/AICoachTab'
-import { DietTab } from './components/DietTab'
-import { LifeTab } from './components/LifeTab'
-import { requestPermission, scheduleNotifications } from './lib/notifications'
-import { applySmartSchedule, applyMoveRules, learnFromEdit, DEFAULT_RULES } from './lib/smartSchedule'
 import { MoodModal } from './components/MoodModal'
-import { JournalModal } from './components/JournalModal'
 import { AddEditModal, type EditActState } from './components/AddEditModal'
 import { DailyCheckIn } from './components/DailyCheckIn'
-import { ProtocolsTab } from './components/ProtocolsTab'
+
+// Lazy loaded — only when user navigates to these tabs
+const CalendarTab = lazy(() => import('./components/CalendarTab').then(m => ({ default: m.CalendarTab })))
+const StatsTab = lazy(() => import('./components/StatsTab').then(m => ({ default: m.StatsTab })))
+const ChatTab = lazy(() => import('./components/ChatTab').then(m => ({ default: m.ChatTab })))
+const AICoachTab = lazy(() => import('./components/AICoachTab').then(m => ({ default: m.AICoachTab })))
+const DietTab = lazy(() => import('./components/DietTab').then(m => ({ default: m.DietTab })))
+const LifeTab = lazy(() => import('./components/LifeTab').then(m => ({ default: m.LifeTab })))
+const ProtocolsTab = lazy(() => import('./components/ProtocolsTab').then(m => ({ default: m.ProtocolsTab })))
+const JournalModal = lazy(() => import('./components/JournalModal').then(m => ({ default: m.JournalModal })))
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -156,12 +159,14 @@ export default function App() {
 
   // Request notification permission on first load, schedule for today
   useEffect(() => {
-    requestPermission().then((granted) => {
-      if (granted) {
-        const tk = todayKey()
-        const todayActs = [...(allActs[tk] || [])].sort((a, b) => a.time.localeCompare(b.time))
-        scheduleNotifications(todayActs, checks[tk] || {})
-      }
+    import('./lib/notifications').then(({ requestPermission, scheduleNotifications }) => {
+      requestPermission().then((granted) => {
+        if (granted) {
+          const tk = todayKey()
+          const todayActs = [...(allActs[tk] || [])].sort((a, b) => a.time.localeCompare(b.time))
+          scheduleNotifications(todayActs, checks[tk] || {})
+        }
+      })
     })
   }, [allActs, checks])
 
@@ -426,6 +431,7 @@ export default function App() {
         isToday={isToday}
       />
 
+      <Suspense fallback={<div className="flex items-center justify-center pt-20 text-muted-3 text-sm">Caricamento...</div>}>
       <div className="px-5 pb-[100px]" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {tab === 'today' && (
           <HabitsTab
@@ -537,6 +543,7 @@ export default function App() {
           />
         )}
       </div>
+      </Suspense>
 
       {/* FAB — add activity */}
       <button
