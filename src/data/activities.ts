@@ -88,8 +88,10 @@ export function buildAll(
   dailyCheckIn: Record<string, DailyCheckInData> = {}
 ): Record<string, Activity[]> {
   const res = { ...saved }
-  const s = new Date('2026-03-28')
-  const e = new Date('2026-05-31')
+  // Only generate 7 days back + 21 days forward = 28 days (not months)
+  const now = new Date()
+  const s = new Date(now); s.setDate(s.getDate() - 7)
+  const e = new Date(now); e.setDate(e.getDate() + 21)
   for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
     const k = dateKey(new Date(d))
 

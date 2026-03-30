@@ -25,7 +25,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [curDate, setCurDate] = useState(new Date())
   const [calMonth, setCalMonth] = useState(new Date())
-  const [allActs, setAllActs] = useState<Record<string, Activity[]>>(() => buildAll())
+  const [allActs, setAllActs] = useState<Record<string, Activity[]>>({})
   const [checks, setChecks] = useState<Record<string, Record<number, boolean>>>({})
   const [history, setHistory] = useState<Record<string, HistoryEntry>>({})
   const [notes, setNotes] = useState<Record<string, string>>({})
@@ -77,6 +77,9 @@ export default function App() {
       } catch (e) {
         console.error('backup parse error', e)
       }
+    } else {
+      // No backup — generate fresh template
+      setAllActs(buildAll())
     }
     setLoading(false)
 
