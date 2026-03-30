@@ -13,6 +13,7 @@ import { AICoachTab } from './components/AICoachTab'
 import { DietTab } from './components/DietTab'
 import { LifeTab } from './components/LifeTab'
 import { requestPermission, scheduleNotifications } from './lib/notifications'
+import { applySmartSchedule } from './lib/smartSchedule'
 import { MoodModal } from './components/MoodModal'
 import { JournalModal } from './components/JournalModal'
 import { AddEditModal, type EditActState } from './components/AddEditModal'
@@ -120,13 +121,24 @@ export default function App() {
   // Actions
   function toggle(id: number) {
     if (!isToday) return
-    const nc = { ...checks, [ck]: { ...(checks[ck] || {}), [id]: !(checks[ck] || {})[id] } }
-    const acts = allActs[ck] || []
+    const wasChecked = !!(checks[ck] || {})[id]
+    const isChecking = !wasChecked
+    const nc = { ...checks, [ck]: { ...(checks[ck] || {}), [id]: isChecking } }
+
+    // Smart scheduling: if checking NAC, shift dependent pills
+    let na = allActs
+    const smartUpdated = applySmartSchedule(id, isChecking, allActs[ck] || [])
+    if (smartUpdated) {
+      na = { ...allActs, [ck]: smartUpdated }
+      setAllActs(na)
+    }
+
+    const acts = na[ck] || []
     const d2 = acts.filter((a) => nc[ck][a.id]).length
     const nh = { ...history, [ck]: { completed: d2, total: acts.length, rate: acts.length ? Math.round((d2 / acts.length) * 100) : 0 } }
     setChecks(nc)
     setHistory(nh)
-    persist(nc, nh, notes, moods, allActs, journal)
+    persist(nc, nh, notes, moods, na, journal)
   }
 
   function saveAct() {
