@@ -35,10 +35,37 @@ export function HabitsTab({
 }: Props) {
   const now = nowHHMM()
 
-  // Find next undone activity
-  const nextAct = isToday
-    ? dayActs.find((a) => a.time >= now && !dayChecks[a.id])
-    : null
+  // Find current and next activity based on real time
+  // "current" = the undone task closest to now (within -30min to +15min window)
+  // "next" = the first undone task after the current window
+  const nowMin = (() => { const [h, m] = now.split(':').map(Number); return h * 60 + m })()
+
+  const { currentAct, nextAct } = isToday
+    ? (() => {
+        let current: Activity | null = null
+        let next: Activity | null = null
+
+        for (const a of dayActs) {
+          if (dayChecks[a.id]) continue
+          const [h, m] = a.time.split(':').map(Number)
+          const actMin = h * 60 + m
+          const diff = actMin - nowMin // positive = future, negative = past
+
+          if (diff >= -30 && diff <= 15 && !current) {
+            current = a // task in the "now" window
+          } else if (diff > 15 && !next) {
+            next = a // first future task outside window
+          }
+        }
+
+        // If no current found, next is the first undone future task
+        if (!next && !current) {
+          next = dayActs.find((a) => !dayChecks[a.id] && a.time >= now) || null
+        }
+
+        return { currentAct: current, nextAct: next || (current ? dayActs.find((a) => !dayChecks[a.id] && a.time > (current?.time || '')) || null : null) }
+      })()
+    : { currentAct: null, nextAct: null }
 
   // Yesterday stats for morning briefing
   const yesterdayKey = dateKey(addDays(new Date(), -1))
@@ -190,19 +217,32 @@ export function HabitsTab({
         <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${rate}%` }} />
       </div>
 
-      {/* Next activity highlight */}
+      {/* Current activity highlight */}
+      {isToday && currentAct && (() => {
+        const curTag = detectTaskTag(currentAct.title, currentAct.fromCal)
+        return (
+          <div className="bg-white text-black rounded-2xl p-3.5 mb-2 flex items-center gap-3">
+            <div className="text-lg">{curTag?.icon || '▶'}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-widest opacity-50">Adesso</div>
+              <div className="text-[14px] font-semibold truncate">{currentAct.title}</div>
+            </div>
+            <div className="text-[13px] font-bold">{currentAct.time}</div>
+          </div>
+        )
+      })()}
+
+      {/* Next activity */}
       {isToday && nextAct && (() => {
         const nextTag = detectTaskTag(nextAct.title, nextAct.fromCal)
         return (
-          <div className="bg-white text-black rounded-2xl p-3.5 mb-4 flex items-center gap-3">
-            <div className="text-lg">{nextTag?.icon || '▶'}</div>
+          <div className="bg-[#111] border border-border text-white rounded-2xl p-3 mb-4 flex items-center gap-3">
+            <div className="text-base">{nextTag?.icon || '◇'}</div>
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-widest opacity-50">
-                {nextTag ? nextTag.label : 'Prossima'}
-              </div>
-              <div className="text-[14px] font-semibold truncate">{nextAct.title}</div>
+              <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-3">Prossima</div>
+              <div className="text-[13px] font-medium truncate text-muted-1">{nextAct.title}</div>
             </div>
-            <div className="text-[13px] font-bold">{nextAct.time}</div>
+            <div className="text-[12px] text-muted-3">{nextAct.time}</div>
           </div>
         )
       })()}
@@ -227,8 +267,11 @@ export function HabitsTab({
 
             {section.acts.map(({ act, idx }) => {
               const isDone = !!dayChecks[act.id]
-              const isNext = act === nextAct
-              const isPast = isToday && act.time < now && !isDone
+              const isCurrent = act === currentAct
+              const isUpNext = act === nextAct
+              const [aH, aM] = act.time.split(':').map(Number)
+              const actMin = aH * 60 + aM
+              const isPast = isToday && !isDone && !isCurrent && actMin < nowMin - 15
               const hasNote = !!notes[`${ck}_${act.id}`]
               const isDragging = dragIdx === idx
               const isDropTarget = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx
@@ -240,9 +283,9 @@ export function HabitsTab({
                   key={act.id}
                   className="rounded-[13px] mb-[7px] overflow-hidden"
                   style={{
-                    border: `1px solid ${isDropTarget ? '#fff' : isNext ? '#fff' : isDone ? '#1e1e1e' : isPast ? '#1a1010' : '#141414'}`,
+                    border: `1px solid ${isDropTarget ? '#fff' : isCurrent ? '#fff' : isDone ? '#1e1e1e' : isPast ? '#1a1010' : '#141414'}`,
                     borderLeft: tag ? `3px solid ${tag.accent}` : undefined,
-                    background: isDragging ? '#151515' : isDone ? '#080808' : isNext ? '#111' : isPast ? '#0a0a0a' : '#0d0d0d',
+                    background: isDragging ? '#151515' : isDone ? '#080808' : isCurrent ? '#111' : isPast ? '#0a0a0a' : '#0d0d0d',
                     opacity: isDragging ? 0.6 : isPast ? 0.7 : 1,
                     transform: isDropTarget ? 'scale(1.02)' : 'scale(1)',
                     transition: 'transform 150ms, opacity 150ms',
@@ -282,7 +325,7 @@ export function HabitsTab({
                       onClick={(e) => { e.stopPropagation(); onToggle(act.id) }}
                       className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] text-black"
                       style={{
-                        border: `1.5px solid ${isDone ? '#fff' : isNext ? '#555' : '#1f1f1f'}`,
+                        border: `1.5px solid ${isDone ? '#fff' : isCurrent ? '#555' : '#1f1f1f'}`,
                         background: isDone ? '#fff' : 'transparent',
                         cursor: !isToday ? 'not-allowed' : 'pointer',
                         opacity: !isToday ? 0.3 : 1,
@@ -299,10 +342,13 @@ export function HabitsTab({
                         <span className="break-words">{act.title}</span>
                       </div>
                       {/* Status badge — own line if present */}
-                      {(isNext && !isDone || isPast) && (
+                      {(isCurrent || isUpNext || isPast) && !isDone && (
                         <div className="mb-1">
-                          {isNext && !isDone && (
+                          {isCurrent && (
                             <span className="text-[10px] text-black bg-white font-bold px-2 py-[2px] rounded-[5px] inline-block">▶ ORA</span>
+                          )}
+                          {isUpNext && !isCurrent && (
+                            <span className="text-[10px] text-[#aaa] bg-[#1a1a1a] font-semibold px-2 py-[2px] rounded-[5px] inline-block">PROSSIMA</span>
                           )}
                           {isPast && (
                             <span className="text-[10px] text-[#999] bg-[#1a1a1a] font-semibold px-2 py-[2px] rounded-[5px] inline-block">SALTATA</span>
