@@ -1,57 +1,37 @@
-import type { Activity } from '../types'
+import type { Activity, ScheduleRule } from '../types'
 
 // ─── Smart Schedule Engine ──────────────────────────────────
 //
-// Dependency chains — when an "anchor" activity changes time,
-// all its dependents shift automatically.
+// Rules live in the database and evolve over time.
+// When user manually corrects an offset, the rule updates.
 //
-// CHAINS:
+// Default rules (seeded on first load):
 //
-// NAC (on check, uses current time):
+// ON CHECK (NAC):
 //   → Olio di cocco         = NAC + 30min
 //   → Immunomix mattina     = NAC + 2h
 //
-// Palestra (on time change):
-//   → Collagene PRE         = Palestra same time (take it right before)
-//   → Collagene POST        = Palestra + 1h15min
+// ON MOVE (Palestra):
+//   → Collagene PRE         = same time
+//   → Collagene POST        = +75min
 //
-// Pranzo (on time change):
-//   → Omega3+Berberol pranzo = Pranzo same time
+// ON MOVE (Pranzo):
+//   → Omega3+Berberol pranzo = same time
 //
-// Cena (on time change):
-//   → Omega3+Berberol+D3+K2  = Cena same time
+// ON MOVE (Cena):
+//   → Omega3+Berberol+D3+K2  = same time
 
-interface DepChain {
-  anchor: string       // substring match for the anchor activity
-  deps: { match: string; offsetMin: number }[]
-}
-
-const CHAINS: DepChain[] = [
-  {
-    anchor: 'palestra',
-    deps: [
-      { match: 'collagene pre', offsetMin: 0 },
-      { match: 'collagene post', offsetMin: 75 },
-    ],
-  },
-  {
-    anchor: 'pranzo',
-    deps: [
-      { match: 'omega3+coq10 + berberol pranzo', offsetMin: 0 },
-    ],
-  },
-  {
-    anchor: 'cena',
-    deps: [
-      { match: 'omega3+coq10 + berberol + d3+k2', offsetMin: 0 },
-    ],
-  },
-]
-
-// NAC is special: triggers on check (not time change), uses real clock
-const NAC_DEPS = [
-  { match: 'olio di cocco', offsetMin: 30 },
-  { match: 'immunomix x2 + psicobrain mattina', offsetMin: 120 },
+export const DEFAULT_RULES: ScheduleRule[] = [
+  // NAC chain (on check)
+  { anchor: 'nac', dependent: 'olio di cocco', offsetMin: 30, trigger: 'check', learned: 0 },
+  { anchor: 'nac', dependent: 'immunomix x2 + psicobrain mattina', offsetMin: 120, trigger: 'check', learned: 0 },
+  // Palestra chain (on move)
+  { anchor: 'palestra', dependent: 'collagene pre', offsetMin: 0, trigger: 'move', learned: 0 },
+  { anchor: 'palestra', dependent: 'collagene post', offsetMin: 75, trigger: 'move', learned: 0 },
+  // Pranzo chain (on move)
+  { anchor: 'pranzo', dependent: 'omega3+coq10 + berberol pranzo', offsetMin: 0, trigger: 'move', learned: 0 },
+  // Cena chain (on move)
+  { anchor: 'cena', dependent: 'omega3+coq10 + berberol + d3+k2', offsetMin: 0, trigger: 'move', learned: 0 },
 ]
 
 function addMinutes(hhmm: string, minutes: number): string {
@@ -62,22 +42,49 @@ function addMinutes(hhmm: string, minutes: number): string {
   return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`
 }
 
+function diffMinutes(a: string, b: string): number {
+  const [ah, am] = a.split(':').map(Number)
+  const [bh, bm] = b.split(':').map(Number)
+  return (bh * 60 + bm) - (ah * 60 + am)
+}
+
 function nowHHMM(): string {
   const n = new Date()
   return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`
 }
 
+function matchesRule(title: string, keyword: string): boolean {
+  return title.toLowerCase().includes(keyword)
+}
+
 /**
- * Called when NAC is checked — shifts morning pills based on real time.
+ * Apply rules when an activity is checked off.
+ * Returns [updatedActs, updatedRules] or null if no changes.
  */
-export function applyNacSchedule(dayActs: Activity[]): Activity[] | null {
-  const nacTime = nowHHMM()
+export function applyCheckRules(
+  actId: number,
+  isChecking: boolean,
+  dayActs: Activity[],
+  rules: ScheduleRule[]
+): { acts: Activity[]; rules: ScheduleRule[] } | null {
+  if (!isChecking) return null
+
+  const act = dayActs.find((a) => a.id === actId)
+  if (!act) return null
+
+  // Find check-triggered rules where this activity is the anchor
+  const matchingRules = rules.filter(
+    (r) => r.trigger === 'check' && matchesRule(act.title, r.anchor)
+  )
+  if (matchingRules.length === 0) return null
+
+  const anchorTime = nowHHMM()
   let changed = false
-  const updated = dayActs.map((a) => {
-    const lower = a.title.toLowerCase()
-    for (const dep of NAC_DEPS) {
-      if (lower.includes(dep.match)) {
-        const newTime = addMinutes(nacTime, dep.offsetMin)
+
+  const updatedActs = dayActs.map((a) => {
+    for (const rule of matchingRules) {
+      if (matchesRule(a.title, rule.dependent)) {
+        const newTime = addMinutes(anchorTime, rule.offsetMin)
         if (a.time !== newTime) {
           changed = true
           return { ...a, time: newTime }
@@ -86,30 +93,31 @@ export function applyNacSchedule(dayActs: Activity[]): Activity[] | null {
     }
     return a
   })
-  return changed ? updated : null
+
+  return changed ? { acts: updatedActs, rules } : null
 }
 
 /**
- * Called when any activity's time is changed (edit/move).
- * Checks if the changed activity is an anchor and shifts its dependents.
+ * Apply rules when an activity's time is changed (edit).
+ * Returns [updatedActs, updatedRules] or null if no changes.
  */
-export function applyChainSchedule(
+export function applyMoveRules(
   changedAct: Activity,
   newTime: string,
-  dayActs: Activity[]
-): Activity[] | null {
-  const lowerTitle = changedAct.title.toLowerCase()
-
-  // Find which chain this activity anchors
-  const chain = CHAINS.find((c) => lowerTitle.includes(c.anchor))
-  if (!chain) return null
+  dayActs: Activity[],
+  rules: ScheduleRule[]
+): { acts: Activity[]; rules: ScheduleRule[] } | null {
+  // Find move-triggered rules where this activity is the anchor
+  const matchingRules = rules.filter(
+    (r) => r.trigger === 'move' && matchesRule(changedAct.title, r.anchor)
+  )
+  if (matchingRules.length === 0) return null
 
   let changed = false
-  const updated = dayActs.map((a) => {
-    const lower = a.title.toLowerCase()
-    for (const dep of chain.deps) {
-      if (lower.includes(dep.match)) {
-        const depTime = addMinutes(newTime, dep.offsetMin)
+  const updatedActs = dayActs.map((a) => {
+    for (const rule of matchingRules) {
+      if (matchesRule(a.title, rule.dependent)) {
+        const depTime = addMinutes(newTime, rule.offsetMin)
         if (a.time !== depTime) {
           changed = true
           return { ...a, time: depTime }
@@ -119,20 +127,51 @@ export function applyChainSchedule(
     return a
   })
 
-  return changed ? updated : null
+  return changed ? { acts: updatedActs, rules } : null
 }
 
 /**
- * Convenience: called on toggle. Only triggers for NAC.
+ * Learn from user corrections.
+ * If the user manually changes the time of a dependent activity
+ * after an anchor was already set, update the rule's offset.
+ *
+ * Call this when user edits any activity's time.
  */
+export function learnFromEdit(
+  editedAct: Activity,
+  newTime: string,
+  dayActs: Activity[],
+  rules: ScheduleRule[]
+): ScheduleRule[] | null {
+  // Is this activity a dependent in any rule?
+  const depRules = rules.filter((r) => matchesRule(editedAct.title, r.dependent))
+  if (depRules.length === 0) return null
+
+  let changed = false
+  const updatedRules = rules.map((rule) => {
+    if (!matchesRule(editedAct.title, rule.dependent)) return rule
+
+    // Find the anchor activity's current time
+    const anchor = dayActs.find((a) => matchesRule(a.title, rule.anchor))
+    if (!anchor) return rule
+
+    const actualOffset = diffMinutes(anchor.time, newTime)
+    if (actualOffset >= 0 && actualOffset !== rule.offsetMin) {
+      changed = true
+      return { ...rule, offsetMin: actualOffset, learned: rule.learned + 1 }
+    }
+    return rule
+  })
+
+  return changed ? updatedRules : null
+}
+
+// Legacy compat
 export function applySmartSchedule(
   actId: number,
   isChecking: boolean,
-  dayActs: Activity[]
-): Activity[] | null {
-  if (!isChecking) return null
-  const act = dayActs.find((a) => a.id === actId)
-  if (!act) return null
-  if (!act.title.toLowerCase().includes('nac')) return null
-  return applyNacSchedule(dayActs)
+  dayActs: Activity[],
+  rules: ScheduleRule[]
+): { acts: Activity[]; rules: ScheduleRule[] } | null {
+  return applyCheckRules(actId, isChecking, dayActs, rules)
 }

@@ -46,6 +46,15 @@ export interface DayMealPlan {
   cena?: string
 }
 
+// Smart scheduling rule: "when anchor moves, shift dependent by offsetMin"
+export interface ScheduleRule {
+  anchor: string       // keyword match for anchor activity (e.g. "palestra")
+  dependent: string    // keyword match for dependent activity (e.g. "collagene pre")
+  offsetMin: number    // minutes after anchor
+  trigger: 'move' | 'check'  // 'move' = when time changes, 'check' = when checked off
+  learned: number      // times this rule has been confirmed by usage
+}
+
 export interface AppData {
   checks: Record<string, Record<number, boolean>>
   history: Record<string, HistoryEntry>
@@ -54,4 +63,5 @@ export interface AppData {
   acts: Record<string, Activity[]>
   journal: Record<string, JournalEntry>
   mealPlans?: Record<string, DayMealPlan>
+  rules?: ScheduleRule[]
 }

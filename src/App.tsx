@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
-import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan } from './types'
+import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan, ScheduleRule } from './types'
 import { dbLoad, dbSave } from './lib/db'
 import { dateKey, todayKey, calcStreak, addDays } from './lib/utils'
 import { buildAll, HABIT_LIST } from './data/activities'
@@ -13,7 +13,7 @@ import { AICoachTab } from './components/AICoachTab'
 import { DietTab } from './components/DietTab'
 import { LifeTab } from './components/LifeTab'
 import { requestPermission, scheduleNotifications } from './lib/notifications'
-import { applySmartSchedule, applyChainSchedule } from './lib/smartSchedule'
+import { applySmartSchedule, applyMoveRules, learnFromEdit, DEFAULT_RULES } from './lib/smartSchedule'
 import { MoodModal } from './components/MoodModal'
 import { JournalModal } from './components/JournalModal'
 import { AddEditModal, type EditActState } from './components/AddEditModal'
@@ -30,6 +30,7 @@ export default function App() {
   const [moods, setMoods] = useState<Record<string, number>>({})
   const [journal, setJournal] = useState<Record<string, JournalEntry>>({})
   const [mealPlans, setMealPlans] = useState<Record<string, DayMealPlan>>({})
+  const [rules, setRules] = useState<ScheduleRule[]>(DEFAULT_RULES)
   const [saveStatus, setSaveStatus] = useState('')
 
   // Modal state
@@ -55,6 +56,7 @@ export default function App() {
       if (b.notes) setNotes(b.notes as typeof notes)
       if (b.moods) setMoods(b.moods as typeof moods)
       if (b.mealPlans) setMealPlans(b.mealPlans as typeof mealPlans)
+      if (b.rules) setRules(b.rules as ScheduleRule[])
       const mp = (b.mealPlans || {}) as Record<string, DayMealPlan>
       if (b.acts) setAllActs(buildAll(b.acts as Record<string, Activity[]>, mp))
       else setAllActs(buildAll({}, mp))
@@ -81,11 +83,11 @@ export default function App() {
   }, [])
 
   const persist = useCallback(
-    (c: typeof checks, h: typeof history, n: typeof notes, m: typeof moods, a: typeof allActs, j: typeof journal, mp?: typeof mealPlans) => {
+    (c: typeof checks, h: typeof history, n: typeof notes, m: typeof moods, a: typeof allActs, j: typeof journal, mp?: typeof mealPlans, r?: typeof rules) => {
       setSaveStatus('saving')
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
-        const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans }
+        const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans, rules: r || rules }
         localStorage.setItem('dc_backup', JSON.stringify(blob))
         dbSave(blob).then(() => {
           setSaveStatus('✓')
@@ -125,12 +127,15 @@ export default function App() {
     const isChecking = !wasChecked
     const nc = { ...checks, [ck]: { ...(checks[ck] || {}), [id]: isChecking } }
 
-    // Smart scheduling: if checking NAC, shift dependent pills
+    // Smart scheduling: if checking an anchor, shift dependents
     let na = allActs
-    const smartUpdated = applySmartSchedule(id, isChecking, allActs[ck] || [])
-    if (smartUpdated) {
-      na = { ...allActs, [ck]: smartUpdated }
+    let nr = rules
+    const smartResult = applySmartSchedule(id, isChecking, allActs[ck] || [], rules)
+    if (smartResult) {
+      na = { ...allActs, [ck]: smartResult.acts }
+      nr = smartResult.rules
       setAllActs(na)
+      setRules(nr)
     }
 
     const acts = na[ck] || []
@@ -138,7 +143,7 @@ export default function App() {
     const nh = { ...history, [ck]: { completed: d2, total: acts.length, rate: acts.length ? Math.round((d2 / acts.length) * 100) : 0 } }
     setChecks(nc)
     setHistory(nh)
-    persist(nc, nh, notes, moods, na, journal)
+    persist(nc, nh, notes, moods, na, journal, undefined, nr)
   }
 
   function saveAct() {
@@ -165,11 +170,17 @@ export default function App() {
         na[ck] = (na[ck] || []).map((x) => (x.id === editItem.id ? { ...editItem, ...actData } : x))
       }
 
-      // Smart chain: if time changed, shift dependent activities
+      // Smart chain: if time changed, shift dependents + learn
       if (editItem.time !== newAct.time) {
-        const chainUpdated = applyChainSchedule(editItem, newAct.time, na[targetDate] || [])
-        if (chainUpdated) {
-          na[targetDate] = chainUpdated
+        // First: learn if user is correcting an auto-shifted dependent
+        const learnedRules = learnFromEdit(editItem, newAct.time, na[targetDate] || [], rules)
+        if (learnedRules) {
+          setRules(learnedRules)
+        }
+        // Then: apply move rules if this is an anchor
+        const moveResult = applyMoveRules(editItem, newAct.time, na[targetDate] || [], learnedRules || rules)
+        if (moveResult) {
+          na[targetDate] = moveResult.acts
         }
       }
 
@@ -194,7 +205,7 @@ export default function App() {
     setShowAdd(false)
     setEditItem(null)
     setNewAct(emptyAct)
-    persist(checks, history, nn, moods, na, journal)
+    persist(checks, history, nn, moods, na, journal, undefined, rules)
   }
 
   function delAct(id: number) {
