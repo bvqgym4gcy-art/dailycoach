@@ -185,27 +185,26 @@ export function HabitsTab({
 
       {/* STICKY: Progress + Next activity */}
       <div className="sticky top-[130px] z-10 bg-black pb-2">
-        {/* Day header */}
-        <div className="flex justify-between items-end mb-2">
+        {/* Day header — entire bar is tappable for incomplete filter */}
+        <div
+          className="flex justify-between items-end mb-2 cursor-pointer"
+          onClick={incomplete > 0 && isToday ? () => setShowIncomplete(!showIncomplete) : undefined}
+        >
           <div>
             <div className="text-xs text-muted-1 capitalize">{fmtLong(curDate)}</div>
             <div className="flex items-center gap-2 mt-px">
               <span className="text-[11px] text-muted-4">{done}/{total}</span>
               {incomplete > 0 && isToday && (
-                <button
-                  onClick={() => setShowIncomplete(!showIncomplete)}
-                  className="text-[11px] cursor-pointer bg-transparent border-none p-0"
-                  style={{ color: showIncomplete ? '#fff' : '#666' }}
-                >
-                  {showIncomplete ? '✕ Mostra tutte' : `${incomplete} incomplete`}
-                </button>
+                <span className="text-[11px]" style={{ color: showIncomplete ? '#fff' : '#666' }}>
+                  {showIncomplete ? '✕ Mostra tutte' : `· ${incomplete} incomplete`}
+                </span>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="text-xl font-bold leading-none">{rate}%</div>
             <button
-              onClick={() => setCurDate(new Date())}
+              onClick={(e) => { e.stopPropagation(); setCurDate(new Date()) }}
               className="text-[10px] text-muted-3 bg-card border border-border px-2 py-[3px] rounded-[7px] cursor-pointer"
             >
               Oggi
