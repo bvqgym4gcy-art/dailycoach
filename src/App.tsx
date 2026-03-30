@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
-import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan, ScheduleRule, DailyCheckInData } from './types'
+import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan, ScheduleRule, DailyCheckInData, ActiveProtocol } from './types'
 import { dbLoad, dbSave } from './lib/db'
 import { dateKey, todayKey, calcStreak, addDays } from './lib/utils'
 import { buildAll, HABIT_LIST } from './data/activities'
@@ -19,6 +19,7 @@ import { MoodModal } from './components/MoodModal'
 import { JournalModal } from './components/JournalModal'
 import { AddEditModal, type EditActState } from './components/AddEditModal'
 import { DailyCheckIn } from './components/DailyCheckIn'
+import { ProtocolsTab } from './components/ProtocolsTab'
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -34,6 +35,7 @@ export default function App() {
   const [mealPlans, setMealPlans] = useState<Record<string, DayMealPlan>>({})
   const [rules, setRules] = useState<ScheduleRule[]>(DEFAULT_RULES)
   const [dailyCheckIn, setDailyCheckIn] = useState<Record<string, DailyCheckInData>>({})
+  const [activeProtocol, setActiveProtocol] = useState<ActiveProtocol | null>(null)
   const [showCheckIn, setShowCheckIn] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
 
@@ -62,6 +64,7 @@ export default function App() {
       if (b.mealPlans) setMealPlans(b.mealPlans as typeof mealPlans)
       if (b.rules) setRules(b.rules as ScheduleRule[])
       if (b.dailyCheckIn) setDailyCheckIn(b.dailyCheckIn as Record<string, DailyCheckInData>)
+      if (b.activeProtocol !== undefined) setActiveProtocol(b.activeProtocol as ActiveProtocol | null)
       const mp = (b.mealPlans || {}) as Record<string, DayMealPlan>
       const ci = (b.dailyCheckIn || {}) as Record<string, DailyCheckInData>
       if (b.acts) setAllActs(buildAll(b.acts as Record<string, Activity[]>, mp, ci))
@@ -96,7 +99,7 @@ export default function App() {
 
   const persist = useCallback(
     (c: typeof checks, h: typeof history, n: typeof notes, m: typeof moods, a: typeof allActs, j: typeof journal, mp?: typeof mealPlans, r?: typeof rules, ci?: typeof dailyCheckIn) => {
-      const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans, rules: r || rules, dailyCheckIn: ci || dailyCheckIn }
+      const blob: AppData = { checks: c, history: h, notes: n, moods: m, acts: a, journal: j, mealPlans: mp || mealPlans, rules: r || rules, dailyCheckIn: ci || dailyCheckIn, activeProtocol }
       // Always save to localStorage immediately (fast, no data loss)
       localStorage.setItem('dc_backup', JSON.stringify(blob))
       // Debounce Supabase save to avoid hammering the API
@@ -473,6 +476,29 @@ export default function App() {
         )}
 
         {tab === 'diet' && <DietTab />}
+
+        {tab === 'protocols' && (
+          <ProtocolsTab
+            activeProtocol={activeProtocol}
+            onActivate={(protocolId) => {
+              const ap: ActiveProtocol = { protocolId, startDate: dateKey(new Date()), dailyLog: {} }
+              setActiveProtocol(ap)
+              persist(checks, history, notes, moods, allActs, journal)
+            }}
+            onToggleRule={(date, ruleId) => {
+              if (!activeProtocol) return
+              const dayLog = { ...(activeProtocol.dailyLog[date] || {}) }
+              dayLog[ruleId] = !dayLog[ruleId]
+              const updated = { ...activeProtocol, dailyLog: { ...activeProtocol.dailyLog, [date]: dayLog } }
+              setActiveProtocol(updated)
+              persist(checks, history, notes, moods, allActs, journal)
+            }}
+            onDeactivate={() => {
+              setActiveProtocol(null)
+              persist(checks, history, notes, moods, allActs, journal)
+            }}
+          />
+        )}
 
         {tab === 'life' && <LifeTab />}
 

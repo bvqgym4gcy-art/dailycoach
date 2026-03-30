@@ -1,0 +1,57 @@
+import type { MoodProtocol } from '../types'
+
+export const PROTOCOLS: MoodProtocol[] = [
+  {
+    id: 'ghost-mode',
+    name: 'Ghost Mode',
+    icon: '👻',
+    description: 'Sparisci dal mondo. 21 giorni di reset totale — solo tu, la disciplina e il silenzio.',
+    durationDays: 21,
+    rules: [
+      { id: 'meditation', icon: '🧘', label: 'Meditazione mattina', type: 'do' },
+      { id: 'cold-shower', icon: '🥶', label: 'Doccia fredda appena sveglio', type: 'do' },
+      { id: 'fasting', icon: '🔒', label: 'Digiuno', type: 'do', frequency: '3x_week' },
+      { id: 'no-alcohol', icon: '🚫', label: 'No alcool', type: 'dont' },
+      { id: 'no-drugs', icon: '🚫', label: 'No droghe', type: 'dont' },
+      { id: 'no-women', icon: '🚫', label: 'No donne', type: 'dont' },
+      { id: 'no-porn', icon: '🚫', label: 'No porno', type: 'dont' },
+      { id: 'no-social', icon: '🚫', label: 'No social media', type: 'dont' },
+      { id: 'stay-in', icon: '🏠', label: 'Non uscire (solo essenziale)', type: 'do' },
+    ],
+  },
+  {
+    id: 'recovery',
+    name: 'Recovery Mode',
+    icon: '🌿',
+    description: 'Ricarica corpo e mente. Lettura, tisane, calore, silenzio — ritrovare l\'equilibrio.',
+    durationDays: 14,
+    rules: [
+      { id: 'reading', icon: '📖', label: 'Lettura (30min minimo)', type: 'do' },
+      { id: 'tisane', icon: '🍵', label: 'Tisana la sera', type: 'do' },
+      { id: 'sauna', icon: '🧖', label: 'Sauna o bagno caldo', type: 'do' },
+      { id: 'yoga', icon: '🧘', label: 'Yoga o stretching', type: 'do' },
+      { id: 'meditation', icon: '🧘‍♂️', label: 'Meditazione', type: 'do' },
+      { id: 'journaling', icon: '📓', label: 'Journaling la sera', type: 'do' },
+      { id: 'no-alcohol', icon: '🚫', label: 'No alcool', type: 'dont' },
+      { id: 'no-screens', icon: '🚫', label: 'No schermi dopo le 21', type: 'dont' },
+    ],
+  },
+  {
+    id: 'beast-mode',
+    name: 'Beast Mode',
+    icon: '🔥',
+    description: 'Modalità bestia. Massima performance, zero scuse — spingi ogni giorno al limite.',
+    durationDays: 30,
+    rules: [
+      { id: 'wake-early', icon: '⏰', label: 'Sveglia alle 6:00', type: 'do' },
+      { id: 'cold-shower', icon: '🥶', label: 'Doccia fredda', type: 'do' },
+      { id: 'sport', icon: '💪', label: 'Sport ogni giorno (no rest day)', type: 'do' },
+      { id: 'deep-work', icon: '🎯', label: 'Deep work 3h (no distrazioni)', type: 'do' },
+      { id: 'reading', icon: '📖', label: 'Lettura 30min', type: 'do' },
+      { id: 'no-junk', icon: '🚫', label: 'No junk food', type: 'dont' },
+      { id: 'no-alcohol', icon: '🚫', label: 'No alcool', type: 'dont' },
+      { id: 'no-excuses', icon: '🚫', label: 'No snooze sveglia', type: 'dont' },
+      { id: 'journal', icon: '📓', label: 'Review serale (cos\'ho fatto oggi)', type: 'do' },
+    ],
+  },
+]

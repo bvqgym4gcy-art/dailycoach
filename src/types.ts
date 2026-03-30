@@ -34,7 +34,31 @@ export interface AIInsight {
   text: string
 }
 
-export type Tab = 'today' | 'calendar' | 'stats' | 'diet' | 'life' | 'chat' | 'ai'
+export type Tab = 'today' | 'calendar' | 'stats' | 'diet' | 'protocols' | 'life' | 'chat' | 'ai'
+
+// Mood Protocols
+export interface ProtocolRule {
+  id: string
+  icon: string
+  label: string
+  type: 'do' | 'dont'        // "do" = must do daily, "dont" = must avoid
+  frequency?: 'daily' | '3x_week'  // default daily
+}
+
+export interface MoodProtocol {
+  id: string
+  name: string
+  icon: string
+  description: string
+  durationDays: number
+  rules: ProtocolRule[]
+}
+
+export interface ActiveProtocol {
+  protocolId: string
+  startDate: string           // YYYY-MM-DD
+  dailyLog: Record<string, Record<string, boolean>>  // date → ruleId → completed/respected
+}
 export type Category = Activity['category']
 
 export interface DayMealPlan {
@@ -82,4 +106,5 @@ export interface AppData {
   calendarEvents?: CalendarEvent[]
   calendarSyncedAt?: string
   dailyCheckIn?: Record<string, DailyCheckInData>
+  activeProtocol?: ActiveProtocol | null
 }
