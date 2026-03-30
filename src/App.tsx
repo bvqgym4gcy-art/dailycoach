@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
-import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan, ScheduleRule, CalendarEvent } from './types'
+import type { Activity, HistoryEntry, JournalEntry, ChatMessage, Tab, AppData, DayMealPlan, ScheduleRule } from './types'
 import { dbLoad, dbSave } from './lib/db'
 import { dateKey, todayKey, calcStreak, addDays } from './lib/utils'
 import { buildAll, HABIT_LIST } from './data/activities'
 import { MOODS } from './config'
-import { mergeCalendarEvents } from './lib/calendarSync'
+import { fetchLiveCalendar, mergeCalendarEvents } from './lib/calendarSync'
 import { Header } from './components/Header'
 import { HabitsTab } from './components/HabitsTab'
 import { CalendarTab } from './components/CalendarTab'
@@ -59,15 +59,8 @@ export default function App() {
       if (b.mealPlans) setMealPlans(b.mealPlans as typeof mealPlans)
       if (b.rules) setRules(b.rules as ScheduleRule[])
       const mp = (b.mealPlans || {}) as Record<string, DayMealPlan>
-      let acts: Record<string, Activity[]>
-      if (b.acts) acts = buildAll(b.acts as Record<string, Activity[]>, mp)
-      else acts = buildAll({}, mp)
-      // Merge live calendar events from DB
-      if (b.calendarEvents) {
-        const merged = mergeCalendarEvents(b.calendarEvents as CalendarEvent[], acts)
-        if (merged) acts = merged
-      }
-      setAllActs(acts)
+      if (b.acts) setAllActs(buildAll(b.acts as Record<string, Activity[]>, mp))
+      else setAllActs(buildAll({}, mp))
       if (b.journal) setJournal(b.journal as typeof journal)
     }
 
@@ -127,6 +120,22 @@ export default function App() {
       }
     })
   }, [allActs, checks])
+
+  // Live Google Calendar sync — on load + every 5 minutes
+  useEffect(() => {
+    let active = true
+    async function sync() {
+      const events = await fetchLiveCalendar()
+      if (!active || !events) return
+      setAllActs((prev) => {
+        const merged = mergeCalendarEvents(events, prev)
+        return merged || prev
+      })
+    }
+    sync()
+    const interval = setInterval(sync, 5 * 60 * 1000)
+    return () => { active = false; clearInterval(interval) }
+  }, [])
 
   // Actions
   function toggle(id: number) {
