@@ -55,6 +55,14 @@ export interface ScheduleRule {
   learned: number      // times this rule has been confirmed by usage
 }
 
+export interface CalendarEvent {
+  date: string
+  time: string
+  title: string
+  duration: number
+  category: Activity['category']
+}
+
 export interface AppData {
   checks: Record<string, Record<number, boolean>>
   history: Record<string, HistoryEntry>
@@ -64,4 +72,6 @@ export interface AppData {
   journal: Record<string, JournalEntry>
   mealPlans?: Record<string, DayMealPlan>
   rules?: ScheduleRule[]
+  calendarEvents?: CalendarEvent[]
+  calendarSyncedAt?: string
 }
