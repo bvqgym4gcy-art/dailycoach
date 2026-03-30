@@ -4,3 +4,7 @@ dist
 .env.local
 *.local
 .vercel
+# iOS build artifacts (keep ios/ project in git for Capacitor)
+ios/App/Pods
+ios/App/build
+*.xcworkspace/xcuserdata
