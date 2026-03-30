@@ -238,7 +238,7 @@ export function HabitsTab({
               return (
                 <div
                   key={act.id}
-                  className="rounded-[13px] mb-[7px] relative overflow-hidden"
+                  className="rounded-[13px] mb-[7px] overflow-hidden"
                   style={{
                     border: `1px solid ${isDropTarget ? '#fff' : isNext ? '#fff' : isDone ? '#1e1e1e' : isPast ? '#1a1010' : '#141414'}`,
                     borderLeft: tag ? `3px solid ${tag.accent}` : undefined,
@@ -251,23 +251,10 @@ export function HabitsTab({
                   {/* Swipe-to-complete background */}
                   {isSwiping && swipeX > 10 && (
                     <div
-                      className="absolute inset-y-0 left-0 bg-white flex items-center pl-4 text-black text-[12px] font-bold"
+                      className="absolute inset-y-0 left-0 bg-white flex items-center pl-4 text-black text-[12px] font-bold z-10"
                       style={{ width: swipeX }}
                     >
                       {swipeX > 40 ? '✓' : ''}
-                    </div>
-                  )}
-
-                  {/* Past activity label */}
-                  {isPast && (
-                    <div className="absolute -top-2 left-3 bg-[#333] text-[#888] text-[8px] font-bold px-[6px] py-[1px] rounded-[10px]">
-                      SALTATA
-                    </div>
-                  )}
-
-                  {isNext && !isDone && (
-                    <div className="absolute -top-2 left-3 bg-white text-black text-[9px] font-bold px-[7px] py-[2px] rounded-[20px]">
-                      ▶ ORA
                     </div>
                   )}
 
@@ -306,12 +293,18 @@ export function HabitsTab({
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(act)}>
-                      <div className={`text-[13px] font-medium mb-0.5 flex items-center gap-1.5 ${isDone ? 'text-[#303030] line-through' : isPast ? 'text-[#666]' : 'text-[#e0e0e0]'}`}>
+                      <div className={`text-[13px] font-medium mb-1 flex items-center gap-1.5 ${isDone ? 'text-[#303030] line-through' : isPast ? 'text-[#666]' : 'text-[#e0e0e0]'}`}>
                         {tag && <span className="text-[12px] shrink-0">{tag.icon}</span>}
                         <span className="truncate">{act.title}</span>
                       </div>
                       <div className="flex gap-1.5 flex-wrap items-center">
-                        <span className="text-[10px] text-muted-3">⏱{act.time}</span>
+                        {isNext && !isDone && (
+                          <span className="text-[8px] text-black bg-white font-bold px-1.5 py-[1px] rounded-[4px]">ORA</span>
+                        )}
+                        {isPast && (
+                          <span className="text-[8px] text-[#888] bg-[#222] font-bold px-1.5 py-[1px] rounded-[4px]">SALTATA</span>
+                        )}
+                        <span className="text-[10px] text-muted-3">{act.time}</span>
                         <span className="text-[10px] text-muted-5">·</span>
                         <span className="text-[10px] text-muted-3">{act.duration}min</span>
                         {tag && <span className="text-[8px] text-muted-3 border border-border px-[5px] py-px rounded-[5px]">{tag.label}</span>}
