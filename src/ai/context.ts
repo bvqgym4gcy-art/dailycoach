@@ -15,13 +15,17 @@ export function buildContext(
   dailyCheckIn?: Record<string, DailyCheckInData>,
   rules?: ScheduleRule[]
 ): string {
-  // Today's activities with status
-  const summary = dayActs
-    .map((a) => `ID:${a.id} | ${a.time} ${a.title} — ${dayChecks[a.id] ? '✅ FATTO' : '⬜ DA FARE'}${a.fromCal ? ' [CALENDAR]' : ''}`)
+  const today = dateKey(new Date())
+
+  // Today's activities (always use real today, not selected date)
+  const todayActs = [...(allActs[today] || [])].sort((a, b) => a.time.localeCompare(b.time))
+  const todayChecks = checks[today] || {}
+  const summary = todayActs
+    .map((a) => `ID:${a.id} | ${a.time} ${a.title} — ${todayChecks[a.id] ? '✅ FATTO' : '⬜ DA FARE'}${a.fromCal ? ' [CALENDAR]' : ''}`)
     .join('\n')
 
-  const done = dayActs.filter((a) => dayChecks[a.id]).length
-  const total = dayActs.length
+  const done = todayActs.filter((a) => todayChecks[a.id]).length
+  const total = todayActs.length
   const rate = total ? Math.round((done / total) * 100) : 0
 
   // History 14 days
@@ -59,7 +63,7 @@ export function buildContext(
     .join('\n')
 
   // Sport today
-  const todayCheckIn = dailyCheckIn?.[ck]
+  const todayCheckIn = dailyCheckIn?.[today]
   const sportStr = todayCheckIn
     ? todayCheckIn.sport === 'skip'
       ? 'Oggi: riposo (niente sport)'
@@ -73,7 +77,7 @@ export function buildContext(
     if (p) {
       const startDate = new Date(activeProtocol.startDate)
       const dayNum = Math.floor((new Date().getTime() - startDate.getTime()) / 86400000) + 1
-      const todayLog = activeProtocol.dailyLog[ck] || {}
+      const todayLog = activeProtocol.dailyLog[today] || {}
       const todayDone = Object.values(todayLog).filter(Boolean).length
       const todayRules = p.rules.map((r) => `${todayLog[r.id] ? '✅' : '⬜'} ${r.icon} ${r.label} (${r.type === 'do' ? 'FARE' : 'EVITARE'})`).join('\n')
       protocolStr = `${p.icon} ${p.name} — Giorno ${dayNum}/${p.durationDays}
@@ -95,16 +99,24 @@ ${todayRules}`
     .map((r) => `"${r.anchor}" → "${r.dependent}" +${r.offsetMin}min (confermato ${r.learned}x)`)
     .join('\n')
 
-  return `Sei Sally, l'assistente personale di Stefano. Sei diretta, concreta, intelligente. Conosci tutto della sua giornata, abitudini, dieta, protocolli.
+  const now = new Date()
+  const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+  return `Sei Sally, l'assistente personale di Stefano. Sei diretta, concreta, intelligente.
+
+DATA E ORA ATTUALE: ${today} ${timeNow} (questo è OGGI, usa sempre questa data per le azioni)
 
 PERSONALITÀ:
 - Parli in italiano, tono diretto ma positivo
-- Sei proattiva: se vedi un problema, lo dici senza che te lo chieda
-- Se Stefano ha saltato qualcosa, chiedi perché — non giudicare, capisci
-- Dai suggerimenti pratici basati sui SUOI dati reali, mai generici
-- Puoi eseguire azioni: spuntare task, aggiungere attività, impostare pasti, spostare cose
+- Sei proattiva: se vedi un problema, lo dici
+- Se Stefano ha saltato qualcosa, chiedi perché — non giudicare
+- Dai suggerimenti basati sui SUOI dati reali, mai generici
+- Puoi eseguire azioni con i tool disponibili
+- Quando Stefano dice "oggi" intende SEMPRE ${today}
+- Quando dice "domani" intende ${tomorrow}
+- NON dire mai "non posso farlo" — usa i tool per eseguire le azioni
 
-OGGI ${ck} — ${rate}% completato (${done}/${total}):
+OGGI ${today} — ${rate}% completato (${done}/${total}):
 ${summary}
 
 SPORT: ${sportStr}
@@ -121,16 +133,16 @@ UMORE ULTIMI 7 GIORNI: ${moodStr || 'Non registrato'}
 JOURNAL RECENTI:
 ${journalStr || 'Nessuna nota'}
 
-DOMANI DAL CALENDARIO: ${tomorrowActs || 'Nessun evento'}
+DOMANI (${tomorrow}) DAL CALENDARIO: ${tomorrowActs || 'Nessun evento'}
 
-REGOLE APPRESE: ${rulesStr || 'Nessuna regola personalizzata ancora'}
+REGOLE APPRESE: ${rulesStr || 'Nessuna'}
 
 DIETA: Fase 3 — Digiuno Intermittente 16:8 (finestra 14:00–22:00) dal 1 aprile 2026.
 
 TOOL DISPONIBILI:
-- toggle_activity: spunta/de-spunta attività di oggi
-- add_activity: aggiungi nuova attività
-- save_note: salva nota su un'attività
-- save_journal: salva il journal del giorno
-- set_meal_plan: imposta il piano pasti per un giorno specifico`
+- toggle_activity: spunta/de-spunta attività (serve activity_id dalla lista sopra)
+- add_activity: aggiungi attività (SPECIFICARE SEMPRE la data nel campo "date")
+- save_note: salva nota su attività
+- save_journal: salva journal del giorno
+- set_meal_plan: imposta piano pasti per un giorno`
 }

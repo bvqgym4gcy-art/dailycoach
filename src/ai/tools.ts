@@ -23,10 +23,11 @@ export const AI_TOOLS = [
   {
     name: 'add_activity',
     description:
-      "Aggiunge una nuova attività alla giornata di oggi. Usa questo quando Stefano dice 'aggiungi X alle Y' o simile.",
+      "Aggiunge una nuova attività a un giorno specifico. Usa SEMPRE il campo date. Se Stefano dice 'oggi', usa la data di oggi dal contesto. Se dice 'domani', usa il giorno dopo.",
     input_schema: {
       type: 'object' as const,
       properties: {
+        date: { type: 'string', description: 'Data in formato YYYY-MM-DD (OBBLIGATORIO)' },
         time: { type: 'string', description: 'Orario in formato HH:MM' },
         title: { type: 'string', description: "Nome dell'attività" },
         category: {
@@ -37,7 +38,7 @@ export const AI_TOOLS = [
         duration: { type: 'number', description: 'Durata in minuti' },
         streak: { type: 'boolean', description: 'Se conta per lo streak' },
       },
-      required: ['time', 'title', 'category', 'duration'],
+      required: ['date', 'time', 'title', 'category', 'duration'],
     },
   },
   {
@@ -97,7 +98,7 @@ export interface ToolCall {
 
 export interface ToolHandlers {
   onToggle: (activityId: number, done: boolean) => string
-  onAddActivity: (act: Omit<Activity, 'id'>) => string
+  onAddActivity: (date: string, act: Omit<Activity, 'id'>) => string
   onSaveNote: (activityId: number, text: string) => string
   onSaveJournal: (text: string) => string
   onSetMealPlan: (date: string, plan: DayMealPlan) => string
@@ -114,13 +115,16 @@ export function handleToolCall(
         tool.input.done as boolean
       )
     case 'add_activity':
-      return handlers.onAddActivity({
-        time: tool.input.time as string,
-        title: tool.input.title as string,
-        category: tool.input.category as Activity['category'],
-        duration: tool.input.duration as number,
-        streak: (tool.input.streak as boolean) ?? false,
-      })
+      return handlers.onAddActivity(
+        tool.input.date as string,
+        {
+          time: tool.input.time as string,
+          title: tool.input.title as string,
+          category: tool.input.category as Activity['category'],
+          duration: tool.input.duration as number,
+          streak: (tool.input.streak as boolean) ?? false,
+        }
+      )
     case 'save_note':
       return handlers.onSaveNote(
         tool.input.activity_id as number,

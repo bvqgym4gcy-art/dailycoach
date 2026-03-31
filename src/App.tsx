@@ -374,12 +374,13 @@ export default function App() {
     return `${done ? '✓' : '✗'} "${act.title}" ${done ? 'segnata come fatta' : 'de-spuntata'}.`
   }
 
-  function aiAddActivity(act: Omit<Activity, 'id'>): string {
+  function aiAddActivity(date: string, act: Omit<Activity, 'id'>): string {
+    const targetDate = date || dateKey(new Date())
     const newActivity: Activity = { ...act, id: Date.now() }
-    const na = { ...allActs, [ck]: [...(allActs[ck] || []), newActivity] }
+    const na = { ...allActs, [targetDate]: [...(allActs[targetDate] || []), newActivity] }
     setAllActs(na)
     persist(checks, history, notes, moods, na, journal)
-    return `Aggiunta: "${act.title}" alle ${act.time}.`
+    return `Aggiunta: "${act.title}" alle ${act.time} del ${targetDate}.`
   }
 
   function aiSaveNote(activityId: number, text: string): string {
