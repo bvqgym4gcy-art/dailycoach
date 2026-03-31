@@ -527,6 +527,9 @@ export default function App() {
               onSaveJournal: aiSaveJournal,
               onSetMealPlan: aiSetMealPlan,
             }}
+            activeProtocol={activeProtocol}
+            dailyCheckIn={dailyCheckIn}
+            rules={rules}
           />
         )}
 
