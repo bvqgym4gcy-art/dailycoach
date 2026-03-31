@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { Activity, HistoryEntry, JournalEntry, ChatMessage, ActiveProtocol, DailyCheckInData, ScheduleRule } from '../types'
 import { buildContext } from '../ai/context'
 import { AI_TOOLS, handleToolCall, type ToolCall, type ToolHandlers } from '../ai/tools'
-import { ANTHROPIC_API_KEY, AI_MODEL } from '../config'
+import { ANTHROPIC_API_KEY, AI_MODEL_FAST } from '../config'
 
 interface Props {
   ck: string
@@ -65,7 +65,7 @@ export function ChatTab({
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: AI_MODEL,
+          model: AI_MODEL_FAST,
           max_tokens: 1500,
           tools: AI_TOOLS,
           messages: apiMessages,
@@ -107,7 +107,7 @@ export function ChatTab({
             'anthropic-dangerous-direct-browser-access': 'true',
           },
           body: JSON.stringify({
-            model: AI_MODEL,
+            model: AI_MODEL_FAST,
             max_tokens: 1500,
             tools: AI_TOOLS,
             messages: [

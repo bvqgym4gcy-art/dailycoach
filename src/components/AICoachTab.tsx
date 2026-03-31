@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Activity, HistoryEntry, JournalEntry, AIInsight } from '../types'
 import { buildContext } from '../ai/context'
-import { ANTHROPIC_API_KEY, AI_MODEL } from '../config'
+import { ANTHROPIC_API_KEY, AI_MODEL_SMART } from '../config'
 
 interface Props {
   ck: string
@@ -34,7 +34,7 @@ export function AICoachTab({ ck, dayActs, dayChecks, checks, allActs, history, m
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: AI_MODEL,
+          model: AI_MODEL_SMART,
           max_tokens: 800,
           messages: [{ role: 'user', content: prompt }],
         }),

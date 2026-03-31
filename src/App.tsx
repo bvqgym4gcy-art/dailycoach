@@ -24,6 +24,47 @@ const LifeTab = lazy(() => import('./components/LifeTab').then(m => ({ default: 
 const ProtocolsTab = lazy(() => import('./components/ProtocolsTab').then(m => ({ default: m.ProtocolsTab })))
 const JournalModal = lazy(() => import('./components/JournalModal').then(m => ({ default: m.JournalModal })))
 
+function FAB({ onAddActivity, onOpenChat }: { onAddActivity: () => void; onOpenChat: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      {/* Backdrop */}
+      {open && (
+        <div className="fixed inset-0 bg-black/60 z-30" onClick={() => setOpen(false)} />
+      )}
+
+      {/* Menu items */}
+      {open && (
+        <div className="fixed bottom-20 right-6 z-40 flex flex-col gap-2 items-end">
+          <button
+            onClick={() => { setOpen(false); onOpenChat() }}
+            className="flex items-center gap-2 bg-card border border-border rounded-xl px-4 py-3 cursor-pointer"
+          >
+            <span className="text-[13px] text-white font-medium">Parla con Sally</span>
+            <span className="text-base">🤖</span>
+          </button>
+          <button
+            onClick={() => { setOpen(false); onAddActivity() }}
+            className="flex items-center gap-2 bg-card border border-border rounded-xl px-4 py-3 cursor-pointer"
+          >
+            <span className="text-[13px] text-white font-medium">Aggiungi attività</span>
+            <span className="text-base">📝</span>
+          </button>
+        </div>
+      )}
+
+      {/* FAB button */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-white text-black text-2xl flex items-center justify-center shadow-lg cursor-pointer z-40 border-none"
+        style={{ lineHeight: 1, transition: 'transform 200ms' , transform: open ? 'rotate(45deg)' : 'none' }}
+      >
+        +
+      </button>
+    </>
+  )
+}
+
 export default function App() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('today')
@@ -548,14 +589,11 @@ export default function App() {
       </div>
       </Suspense>
 
-      {/* FAB — add activity */}
-      <button
-        onClick={() => { setShowAdd(true); setEditItem(null); setNewAct({ ...emptyAct, date: ck }) }}
-        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-white text-black text-2xl font-light flex items-center justify-center shadow-lg cursor-pointer z-30 border-none"
-        style={{ maxWidth: 480, lineHeight: 1 }}
-      >
-        +
-      </button>
+      {/* FAB — expandable menu */}
+      <FAB
+        onAddActivity={() => { setShowAdd(true); setEditItem(null); setNewAct({ ...emptyAct, date: ck }) }}
+        onOpenChat={() => setTab('chat')}
+      />
 
       {showCheckIn && <DailyCheckIn onComplete={handleCheckIn} />}
       {showMood && <MoodModal todayMood={todayMood} onSave={saveMood} onClose={() => setShowMood(false)} />}
