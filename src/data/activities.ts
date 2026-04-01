@@ -63,11 +63,11 @@ function buildMeals(k: string, mealPlan?: DayMealPlan): Omit<Activity, 'id'>[] {
     ]
   }
 
-  const fallback = WEEKLY_PLAN[dayOfWeek]
+  const f = WEEKLY_PLAN[dayOfWeek]
   const colazione = mealPlan?.colazione || '🔒 Digiuno — solo acqua, tè, caffè'
-  const pranzo = mealPlan?.pranzo || `${fallback.pranzo.carb}, ${fallback.pranzo.protein}`
-  const merenda = mealPlan?.merenda || fallback.merenda
-  const cena = mealPlan?.cena || `${fallback.cena.protein}, ${fallback.cena.verdura}`
+  const pranzo = mealPlan?.pranzo || `${f.pranzo.carb} + ${f.pranzo.protein} + ${f.pranzo.verdura} + Olio EVO 2 cucchiai (20g)`
+  const merenda = mealPlan?.merenda || f.merenda
+  const cena = mealPlan?.cena || `Pane di grano duro 3 fette (90g) + ${f.cena.protein} + ${f.cena.verdura} + Olio EVO 1.5 cucchiai (15g)`
 
   const meals: Omit<Activity, 'id'>[] = [
     { time: '08:00', title: colazione.startsWith('🔒') ? colazione : `☕ Colazione — ${colazione}`, category: 'routine', duration: 10, streak: true },

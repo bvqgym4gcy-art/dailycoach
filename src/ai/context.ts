@@ -95,7 +95,10 @@ export function buildContext(
   const todayMealPlan = mealPlans?.[today]
   const todayPlanStr = todayMealPlan
     ? `Colazione: ${todayMealPlan.colazione || '-'}, Pranzo: ${todayMealPlan.pranzo || '-'}, Merenda: ${todayMealPlan.merenda || '-'}, Cena: ${todayMealPlan.cena || '-'}`
-    : `Fallback piano settimanale (${DAY_NAMES[dayOfWeek]}): Pranzo ${WEEKLY_PLAN[dayOfWeek].pranzo.carb} + ${WEEKLY_PLAN[dayOfWeek].pranzo.protein}, Cena ${WEEKLY_PLAN[dayOfWeek].cena.protein}`
+    : (() => {
+        const wp = WEEKLY_PLAN[dayOfWeek]
+        return `Piano ${DAY_NAMES[dayOfWeek]}: Pranzo: ${wp.pranzo.carb} + ${wp.pranzo.protein} + ${wp.pranzo.verdura} + Olio EVO 20g | Merenda: ${wp.merenda} | Cena: Pane 3 fette 90g + ${wp.cena.protein} + ${wp.cena.verdura} + Olio EVO 15g`
+      })()
 
   // ── SMART RULES ──
   const allRules = (rules || []).map((r) => `${r.anchor} → ${r.dependent}: +${r.offsetMin}min (${r.trigger}, confermato ${r.learned}x)`).join('\n')
