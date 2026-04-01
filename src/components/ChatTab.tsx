@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import type { Activity, HistoryEntry, JournalEntry, ChatMessage, ActiveProtocol, DailyCheckInData, ScheduleRule } from '../types'
+import type { Activity, HistoryEntry, JournalEntry, ChatMessage, ActiveProtocol, DailyCheckInData, ScheduleRule, DayMealPlan } from '../types'
 import { buildContext } from '../ai/context'
 import { AI_TOOLS, handleToolCall, type ToolCall, type ToolHandlers } from '../ai/tools'
 import { ANTHROPIC_API_KEY, AI_MODEL_FAST } from '../config'
@@ -19,12 +19,14 @@ interface Props {
   activeProtocol?: ActiveProtocol | null
   dailyCheckIn?: Record<string, DailyCheckInData>
   rules?: ScheduleRule[]
+  notes?: Record<string, string>
+  mealPlans?: Record<string, DayMealPlan>
 }
 
 export function ChatTab({
   ck, dayActs, dayChecks, checks, allActs, history, moods, journal,
   messages, setMessages, toolHandlers,
-  activeProtocol, dailyCheckIn, rules,
+  activeProtocol, dailyCheckIn, rules, notes, mealPlans,
 }: Props) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -68,7 +70,7 @@ export function ChatTab({
 
     try {
       // Build fresh context every time (reflects latest state)
-      const ctx = buildContext(ck, dayActs, dayChecks, checks, allActs, history, moods, journal, activeProtocol, dailyCheckIn, rules)
+      const ctx = buildContext(ck, dayActs, dayChecks, checks, allActs, history, moods, journal, activeProtocol, dailyCheckIn, rules, notes, mealPlans)
 
       // If this is the first message, initialize API history with system context
       if (apiHistory.current.length === 0) {

@@ -604,6 +604,8 @@ export default function App() {
             activeProtocol={activeProtocol}
             dailyCheckIn={dailyCheckIn}
             rules={rules}
+            notes={notes}
+            mealPlans={mealPlans}
           />
         )}
 
