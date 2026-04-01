@@ -565,9 +565,41 @@ export default function App() {
             toolHandlers={{
               onToggle: aiToggle,
               onAddActivity: aiAddActivity,
+              onDeleteActivity: (activityId: number) => {
+                const tk = dateKey(new Date())
+                const act = (allActs[tk] || []).find((a) => a.id === activityId)
+                if (!act) return `Attività ${activityId} non trovata.`
+                const na = { ...allActs, [tk]: (allActs[tk] || []).filter((a) => a.id !== activityId) }
+                setAllActs(na)
+                persist(checks, history, notes, moods, na, journal)
+                return `Eliminata: "${act.title}".`
+              },
+              onMoveActivity: (activityId: number, newDate: string | undefined, newTime: string) => {
+                const tk = dateKey(new Date())
+                const sourceDate = newDate && newDate !== tk ? tk : tk
+                const targetDate = newDate || tk
+                const act = (allActs[sourceDate] || []).find((a) => a.id === activityId)
+                if (!act) return `Attività ${activityId} non trovata.`
+                const na = { ...allActs }
+                if (targetDate !== sourceDate) {
+                  na[sourceDate] = (na[sourceDate] || []).filter((a) => a.id !== activityId)
+                  na[targetDate] = [...(na[targetDate] || []), { ...act, time: newTime }]
+                } else {
+                  na[sourceDate] = (na[sourceDate] || []).map((a) => a.id === activityId ? { ...a, time: newTime } : a)
+                }
+                setAllActs(na)
+                persist(checks, history, notes, moods, na, journal)
+                return `Spostata "${act.title}" → ${targetDate} alle ${newTime}.`
+              },
               onSaveNote: aiSaveNote,
               onSaveJournal: aiSaveJournal,
               onSetMealPlan: aiSetMealPlan,
+              onGetDay: (date: string) => {
+                const acts = [...(allActs[date] || [])].sort((a, b) => a.time.localeCompare(b.time))
+                const dayChecks2 = checks[date] || {}
+                if (acts.length === 0) return `Nessuna attività per ${date}.`
+                return acts.map((a) => `ID:${a.id} | ${a.time} ${a.title} — ${dayChecks2[a.id] ? '✅' : '⬜'}${a.fromCal ? ' [CAL]' : ''}`).join('\n')
+              },
             }}
             activeProtocol={activeProtocol}
             dailyCheckIn={dailyCheckIn}

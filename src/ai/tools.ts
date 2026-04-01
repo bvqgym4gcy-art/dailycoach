@@ -3,38 +3,26 @@ import type { Activity, DayMealPlan } from '../types'
 export const AI_TOOLS = [
   {
     name: 'toggle_activity',
-    description:
-      "Spunta o de-spunta un'attività di oggi. Usa questo quando Stefano dice di aver fatto qualcosa o chiede di segnare un'attività come completata/non completata.",
+    description: "Spunta o de-spunta un'attività. Usa l'activity_id dalla lista nel contesto.",
     input_schema: {
       type: 'object' as const,
       properties: {
-        activity_id: {
-          type: 'number',
-          description: "L'ID numerico dell'attività da spuntare/de-spuntare",
-        },
-        done: {
-          type: 'boolean',
-          description: 'true per segnare come fatto, false per de-spuntare',
-        },
+        activity_id: { type: 'number', description: "L'ID numerico dell'attività" },
+        done: { type: 'boolean', description: 'true = fatto, false = non fatto' },
       },
       required: ['activity_id', 'done'],
     },
   },
   {
     name: 'add_activity',
-    description:
-      "Aggiunge una nuova attività a un giorno specifico. Usa SEMPRE il campo date. Se Stefano dice 'oggi', usa la data di oggi dal contesto. Se dice 'domani', usa il giorno dopo.",
+    description: "Aggiunge una nuova attività a un giorno. SEMPRE specificare la data.",
     input_schema: {
       type: 'object' as const,
       properties: {
-        date: { type: 'string', description: 'Data in formato YYYY-MM-DD (OBBLIGATORIO)' },
-        time: { type: 'string', description: 'Orario in formato HH:MM' },
+        date: { type: 'string', description: 'Data YYYY-MM-DD (OBBLIGATORIO)' },
+        time: { type: 'string', description: 'Orario HH:MM' },
         title: { type: 'string', description: "Nome dell'attività" },
-        category: {
-          type: 'string',
-          enum: ['salute', 'sport', 'lavoro', 'routine', 'sociale'],
-          description: 'Categoria',
-        },
+        category: { type: 'string', enum: ['salute', 'sport', 'lavoro', 'routine', 'sociale'], description: 'Categoria' },
         duration: { type: 'number', description: 'Durata in minuti' },
         streak: { type: 'boolean', description: 'Se conta per lo streak' },
       },
@@ -42,47 +30,76 @@ export const AI_TOOLS = [
     },
   },
   {
-    name: 'save_note',
-    description:
-      "Salva una nota su un'attività specifica. Usa questo quando Stefano vuole annotare qualcosa su un'attività.",
+    name: 'delete_activity',
+    description: "Elimina un'attività. Usa l'activity_id dalla lista.",
     input_schema: {
       type: 'object' as const,
       properties: {
-        activity_id: {
-          type: 'number',
-          description: "L'ID dell'attività",
-        },
-        text: { type: 'string', description: 'Il testo della nota' },
+        activity_id: { type: 'number', description: "L'ID dell'attività da eliminare" },
+      },
+      required: ['activity_id'],
+    },
+  },
+  {
+    name: 'move_activity',
+    description: "Sposta un'attività a un nuovo orario e/o giorno.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        activity_id: { type: 'number', description: "L'ID dell'attività" },
+        new_date: { type: 'string', description: 'Nuova data YYYY-MM-DD (opzionale, se non cambia)' },
+        new_time: { type: 'string', description: 'Nuovo orario HH:MM' },
+      },
+      required: ['activity_id', 'new_time'],
+    },
+  },
+  {
+    name: 'save_note',
+    description: "Salva una nota su un'attività.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        activity_id: { type: 'number', description: "L'ID dell'attività" },
+        text: { type: 'string', description: 'Testo della nota' },
       },
       required: ['activity_id', 'text'],
     },
   },
   {
     name: 'save_journal',
-    description:
-      'Salva il journal del giorno. Usa questo quando Stefano vuole scrivere una riflessione o nota del giorno.',
+    description: 'Salva il journal del giorno.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        text: { type: 'string', description: 'Il testo del journal' },
+        text: { type: 'string', description: 'Testo del journal' },
       },
       required: ['text'],
     },
   },
   {
     name: 'set_meal_plan',
-    description:
-      "Imposta il piano alimentare per uno o più giorni. Usa questo quando Stefano ti dà un piano alimentare (PDF, testo, ecc.) e ti chiede di applicarlo a un periodo. Chiama questo tool una volta per ogni giorno. I campi sono opzionali: imposta solo quelli presenti nel piano.",
+    description: "Imposta il piano alimentare per un giorno. Chiama una volta per giorno.",
     input_schema: {
       type: 'object' as const,
       properties: {
-        date: { type: 'string', description: 'La data in formato YYYY-MM-DD' },
-        colazione: { type: 'string', description: 'Cosa mangiare a colazione (o nota digiuno)' },
-        spuntino1: { type: 'string', description: 'Spuntino di metà mattina' },
-        pranzo: { type: 'string', description: 'Cosa mangiare a pranzo con quantità' },
-        spuntino2: { type: 'string', description: 'Spuntino pomeridiano' },
-        merenda: { type: 'string', description: 'Merenda con quantità' },
-        cena: { type: 'string', description: 'Cosa mangiare a cena con quantità' },
+        date: { type: 'string', description: 'Data YYYY-MM-DD' },
+        colazione: { type: 'string', description: 'Colazione' },
+        spuntino1: { type: 'string', description: 'Spuntino mattina' },
+        pranzo: { type: 'string', description: 'Pranzo con quantità' },
+        spuntino2: { type: 'string', description: 'Spuntino pomeriggio' },
+        merenda: { type: 'string', description: 'Merenda' },
+        cena: { type: 'string', description: 'Cena con quantità' },
+      },
+      required: ['date'],
+    },
+  },
+  {
+    name: 'get_day',
+    description: "Leggi le attività di un giorno specifico. Usa questo quando Stefano chiede di un giorno diverso da oggi (es. 'cosa ho venerdì?', 'com'è domani?').",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        date: { type: 'string', description: 'Data YYYY-MM-DD' },
       },
       required: ['date'],
     },
@@ -99,37 +116,36 @@ export interface ToolCall {
 export interface ToolHandlers {
   onToggle: (activityId: number, done: boolean) => string
   onAddActivity: (date: string, act: Omit<Activity, 'id'>) => string
+  onDeleteActivity: (activityId: number) => string
+  onMoveActivity: (activityId: number, newDate: string | undefined, newTime: string) => string
   onSaveNote: (activityId: number, text: string) => string
   onSaveJournal: (text: string) => string
   onSetMealPlan: (date: string, plan: DayMealPlan) => string
+  onGetDay: (date: string) => string
 }
 
-export function handleToolCall(
-  tool: ToolCall,
-  handlers: ToolHandlers
-): string {
+export function handleToolCall(tool: ToolCall, handlers: ToolHandlers): string {
   switch (tool.name) {
     case 'toggle_activity':
-      return handlers.onToggle(
-        tool.input.activity_id as number,
-        tool.input.done as boolean
-      )
+      return handlers.onToggle(tool.input.activity_id as number, tool.input.done as boolean)
     case 'add_activity':
-      return handlers.onAddActivity(
-        tool.input.date as string,
-        {
-          time: tool.input.time as string,
-          title: tool.input.title as string,
-          category: tool.input.category as Activity['category'],
-          duration: tool.input.duration as number,
-          streak: (tool.input.streak as boolean) ?? false,
-        }
+      return handlers.onAddActivity(tool.input.date as string, {
+        time: tool.input.time as string,
+        title: tool.input.title as string,
+        category: tool.input.category as Activity['category'],
+        duration: tool.input.duration as number,
+        streak: (tool.input.streak as boolean) ?? false,
+      })
+    case 'delete_activity':
+      return handlers.onDeleteActivity(tool.input.activity_id as number)
+    case 'move_activity':
+      return handlers.onMoveActivity(
+        tool.input.activity_id as number,
+        tool.input.new_date as string | undefined,
+        tool.input.new_time as string
       )
     case 'save_note':
-      return handlers.onSaveNote(
-        tool.input.activity_id as number,
-        tool.input.text as string
-      )
+      return handlers.onSaveNote(tool.input.activity_id as number, tool.input.text as string)
     case 'save_journal':
       return handlers.onSaveJournal(tool.input.text as string)
     case 'set_meal_plan': {
@@ -142,6 +158,8 @@ export function handleToolCall(
       if (tool.input.cena) plan.cena = tool.input.cena as string
       return handlers.onSetMealPlan(tool.input.date as string, plan)
     }
+    case 'get_day':
+      return handlers.onGetDay(tool.input.date as string)
     default:
       return `Tool sconosciuto: ${tool.name}`
   }
