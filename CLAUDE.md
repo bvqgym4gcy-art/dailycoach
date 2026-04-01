@@ -266,10 +266,42 @@ Dal 1 aprile 2026, le attività "Pranzo leggero" e "Cena" vengono sostituite con
 
 ---
 
-## Cose da NON fare
+## Regole fondamentali
 
-- Non aggiungere colori (niente viola, verde, blu — solo B&W)
-- Non usare librerie UI (no shadcn, no MUI, no Chakra)
-- Non cancellare dati esistenti su Supabase
-- Non cambiare la logica streak/check
-- Non modificare il template attività senza aggiornare `buildAll()`
+### Design
+- B&W puro — zero colori, mai, non-negoziabile
+- No librerie UI (no shadcn, MUI, Chakra) — tutto custom
+
+### Sviluppo
+- Ogni fix deve risolvere la CLASSE di problemi, non solo il caso specifico
+- Ogni miglioramento si applica a tutto il sistema, per sempre
+- Mai hardcodare dati che possono venire dal database
+- `dateKey()` usa ora locale, mai UTC
+- `persist()` salva localStorage immediatamente, Supabase debounced
+- Calendar events vengono SOLO dal live iCal sync, non hardcoded
+
+### Chat AI (Sally)
+- SEMPRE usare tool per eseguire azioni — mai dire "non posso"
+- `add_activity` richiede SEMPRE il campo `date`
+- Il contesto usa `dateKey(new Date())` per "oggi", mai `ck` (data selezionata)
+- `apiHistory` ref mantiene tutta la conversazione per contesto
+- Pasti devono mostrare TUTTI i componenti (carb + proteina + verdura + condimento)
+- Variare le alternative del piano alimentare — mai stessa proteina 2 giorni di fila
+
+### Dieta
+- Piano del Dott. Luca Musella (Kairoo) — Fase 3 IF 16:8 dal 1 aprile 2026
+- Ogni pasto ha alternative con frequenze (libera, 1x/sett, 2x/sett)
+- Sally conosce tutte le alternative e deve variare quando pianifica
+- Olio di cocco ogni mattina 30min dopo NAC (solo in Fase 3)
+
+### Smart Schedule
+- Regole di dipendenza vivono nel DB, non nel codice
+- Si aggiornano quando l'utente corregge un offset
+- NAC → olio cocco +30min, immunomix +2h
+- Palestra → collagene PRE +0min, POST +75min
+- Pranzo/Cena → pillole associate allo stesso orario
+
+### Sport
+- Dinamico da daily check-in (palestra/nuoto/corsa/yoga/skip)
+- Mai hardcoded nel template — solo dal check-in
+- Se skip: niente sport + niente collagene PRE/POST
