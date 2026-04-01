@@ -1,7 +1,7 @@
 import type { Activity, HistoryEntry, JournalEntry, DailyCheckInData, ActiveProtocol, ScheduleRule, DayMealPlan } from '../types'
 import { dateKey, addDays } from '../lib/utils'
 import { PROTOCOLS } from '../data/protocols'
-import { WEEKLY_PLAN, DAY_NAMES, DIET_RULES } from '../data/diet'
+import { WEEKLY_PLAN, DAY_NAMES, DIET_RULES, PRANZO, CENA, MERENDA, MERENDA_ALT, MERENDA_FRUTTA_ALT } from '../data/diet'
 
 export function buildContext(
   ck: string,
@@ -130,6 +130,26 @@ Disponibili: ${availableProtocols}
 ═══ DIETA (Fase 3 IF 16:8, 14:00-22:00) ═══
 Piano oggi: ${todayPlanStr}
 Regole: ${DIET_RULES.notes.join(' | ')}
+
+ALTERNATIVE PRANZO (varia ogni giorno!):
+Carboidrati: ${PRANZO.components.find(c => c.label === 'Carboidrati')?.alternatives.map(a => `${a.name} ${a.qty}`).join(', ') || '-'}
+Proteine (libere): ${PRANZO.components.find(c => c.label === 'Proteina')?.alternatives.filter(a => a.frequency === 'free').map(a => `${a.name} ${a.qty}`).join(', ') || '-'}
+Proteine (1x/sett): ${PRANZO.components.find(c => c.label === 'Proteina')?.alternatives.filter(a => a.frequency === 'once_week').map(a => `${a.name} ${a.qty}`).join(', ') || '-'}
+Verdure: ${PRANZO.components.find(c => c.label === 'Verdura')?.alternatives.map(a => `${a.name} ${a.qty}`).join(', ') || '-'}
+Condimento: Olio EVO 2 cucchiai (20g) + 1 cucchiaio olio di cocco tra le alternative
+
+ALTERNATIVE CENA:
+Proteine (libere): ${CENA.components.find(c => c.label === 'Proteina')?.alternatives.filter(a => a.frequency === 'free').map(a => `${a.name} ${a.qty}`).join(', ') || '-'}
+Proteine (1x/sett): ${CENA.components.find(c => c.label === 'Proteina')?.alternatives.filter(a => a.frequency === 'once_week').map(a => `${a.name} ${a.qty}`).join(', ') || '-'}
+Verdure: ${CENA.components.find(c => c.label === 'Verdura')?.alternatives.map(a => `${a.name} ${a.qty}`).join(', ') || '-'}
+Pane: Pane di grano duro 3 fette 90g OPPURE Pane integrale 3 fette 90g
+Condimento: Olio EVO 1.5 cucchiai (15g)
+
+MERENDA: ${MERENDA.components.map(c => `${c.label}: ${c.main.name} ${c.main.qty}`).join(', ')}
+Alt merenda: ${MERENDA_ALT.map(a => `${a.name}: ${a.components.map(c => `${c.item.name} ${c.item.qty}`).join(' + ')}`).join(' | ')}
+Frutta: ${MERENDA_FRUTTA_ALT.map(a => `${a.name} ${a.qty}`).join(', ')}
+
+REGOLA CHIAVE: mai la stessa proteina 2 giorni di fila, variare verdure, rispettare le frequenze (1x/sett = max 1 volta, libera = quando vuoi)
 
 ═══ STORICO 14GG ═══
 ${hist || '-'}
