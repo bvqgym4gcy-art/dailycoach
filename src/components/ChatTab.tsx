@@ -74,6 +74,13 @@ export function ChatTab({
 
       let data = await r.json()
 
+      // Check for API errors
+      if (data.error) {
+        setMessages((m) => [...m, { role: 'assistant', content: `Errore API: ${data.error.message || JSON.stringify(data.error)}` }])
+        setLoading(false)
+        return
+      }
+
       // Handle tool use loop (max 5 iterations for multi-action requests)
       let iterations = 0
       while (data.stop_reason === 'tool_use' && iterations < 5) {

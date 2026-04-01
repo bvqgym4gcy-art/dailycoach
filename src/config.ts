@@ -3,7 +3,7 @@ export const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 export const USER_ID = 'stefano'
 
 export const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || ''
-export const AI_MODEL_FAST = 'claude-haiku-4-5-20251001'   // chat — fast responses
+export const AI_MODEL_FAST = 'claude-sonnet-4-20250514'    // chat — reliable with tools
 export const AI_MODEL_SMART = 'claude-sonnet-4-20250514'   // analysis — deeper thinking
 
 export const MOODS = [
